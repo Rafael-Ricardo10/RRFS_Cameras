@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Zona de Detecção · {{ cam.nome }}{% endblock %}
+
+{% block extra_css %}
+.editor-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.page-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+/* ── Canvas wrapper ──────────────────────────────── */
+.canvas-wrapper {
+    position: relative;
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 2px solid var(--border);
+    cursor: crosshair;
+    user-select: none;
+}
+.canvas-wrapper.modo-apagar { cursor: not-allowed; }
+
+#canvas-stream {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+#canvas-draw {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: all;
+}
+
+/* ── Toolbar ─────────────────────────────────────── */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 0;
+    flex-wrap: wrap;
+}
+.toolbar-sep {
+    width: 1px;
+    height: 28px;
+    background: var(--border);
+    margin: 0 4px;
+}
+
+/* ── Instruções ──────────────────────────────────── */
+.instrucoes {
+    background: rgba(0,170,255,0.06);
+    border: 1px solid rgba(0,170,255,0.15);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+.instrucoes strong { color: var(--accent); }
+
+/* ── Info pontos ─────────────────────────────────── */
+.info-pontos {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+.pontos-count {
+    background: var(--bg-input);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* ── Status bar ──────────────────────────────────── */
+.status-bar {
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    margin-top: 12px;
+    display: none;
+}
+.status-bar.show { display: block; }
+.status-bar.ok   {
+    background: rgba(0,170,68,0.1);
+    border: 1px solid rgba(0,170,68,0.25);
+    color: #00cc55;
+}
+.status-bar.erro {
+    background: rgba(204,34,0,0.1);
+    border: 1px solid rgba(204,34,0,0.25);
+    color: #ff4422;
+}
+
+/* ── Preview zona ────────────────────────────────── */
+.zona-preview {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+.zona-preview code {
+    display: block;
+    background: var(--bg-input);
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    margin-top: 6px;
+    font-size: 11px;
+    word-break: break-all;
+    max-height: 60px;
+    overflow-y: auto;
+}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+<div class="editor-container">
+
+    <div class="page-title">
+        📐 Zona de Detecção · {{ cam.nome }}
+    </div>
+    <div class="page-sub">
+        {{ cam.ip }}:{{ cam.porta }} &nbsp;·&nbsp;
+        Defina a área onde o sistema deve detectar movimento
+    </div>
+
+    <!-- Instruções -->
+    <div class="instrucoes">
+        <strong>Como usar:</strong><br>
+        1. <strong>Clique</strong> na imagem para adicionar pontos do polígono<br>
+        2. Adicione pelo menos <strong>3 pontos</strong> para formar a área<br>
+        3. O polígono fecha automaticamente ao salvar<br>
+        4. Clique em <strong>Salvar Zona</strong> para ativar a detecção<br>
+        5. Use <strong>Limpar</strong> para remover todos os pontos e desativar a zona
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button class="btn btn-danger btn-sm" onclick="limparZona()">
+            🗑 Limpar
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="desfazer()">
+            ↩ Desfazer
+        </button>
+        <div class="toolbar-sep"></div>
+        <button class="btn btn-primary" onclick="salvarZona()" id="btn-salvar">
+            ✓ Salvar Zona
+        </button>
+        <a href="{{ url_for('cameras.configuracoes') }}"
+           class="btn btn-secondary btn-sm">
+            ← Voltar
+        </a>
+        <div class="info-pontos">
+            Pontos: <span class="pontos-count" id="count-pontos">0</span>
+        </div>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-wrapper" id="canvas-wrapper">
+        <!-- Stream ao vivo como fundo -->
+        <img id="canvas-stream"
+             src="{{ url_for('streaming.video_feed', cam_id=cam.id) }}"
+             alt="Stream {{ cam.nome }}">
+        <!-- Canvas de desenho por cima -->
+        <canvas id="canvas-draw"></canvas>
+    </div>
+
+    <!-- Status -->
+    <div class="status-bar" id="status-bar"></div>
+
+    <!-- Preview dos pontos -->
+    <div class="zona-preview" id="zona-preview" style="display:none">
+        Zona atual (<span id="preview-count">0</span> pontos):
+        <code id="preview-json"></code>
+    </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Configuração ─────────────────────────────────────────────────────────
+const CAM_ID        = {{ cam.id }};
+const ZONA_SALVA    = {{ cam.zona_pontos | default('[]') | tojson }};
+const FRAME_W       = 640;
+const FRAME_H       = 360;
+
+// ── Estado ───────────────────────────────────────────────────────────────
+let pontos = [];   // [{x, y}, ...]  coordenadas no espaço do frame (640x360)
+
+// ── Elementos ────────────────────────────────────────────────────────────
+const wrapper = document.getElementById('canvas-wrapper');
+const canvas  = document.getElementById('canvas-draw');
+const ctx     = canvas.getContext('2d');
+const img     = document.getElementById('canvas-stream');
+
+// ── Ajusta canvas ao tamanho real do elemento ────────────────────────────
+function ajustarCanvas() {
+    canvas.width  = img.offsetWidth  || 640;
+    canvas.height = img.offsetHeight || 360;
+    redesenhar();
+}
+
+window.addEventListener('resize', ajustarCanvas);
+img.addEventListener('load', ajustarCanvas);
+setTimeout(ajustarCanvas, 500);
+
+// ── Converte coordenada de tela → espaço do frame (640x360) ──────────────
+function telaParaFrame(ex, ey) {
+    const rect  = canvas.getBoundingClientRect();
+    const scaleX = FRAME_W / rect.width;
+    const scaleY = FRAME_H / rect.height;
+    return {
+        x: Math.round((ex - rect.left) * scaleX),
+        y: Math.round((ey - rect.top)  * scaleY)
+    };
+}
+
+// ── Converte espaço do frame → coordenada de tela ────────────────────────
+function frameParaTela(fx, fy) {
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = rect.width  / FRAME_W;
+    const scaleY = rect.height / FRAME_H;
+    return {
+        x: fx * scaleX,
+        y: fy * scaleY
+    };
+}
+
+// ── Clique → adiciona ponto ───────────────────────────────────────────────
+canvas.addEventListener('click', function(e) {
+    const pt = telaParaFrame(e.clientX, e.clientY);
+    pontos.push([pt.x, pt.y]);
+    redesenhar();
+    atualizarUI();
+});
+
+// ── Redesenha polígono ────────────────────────────────────────────────────
+function redesenhar() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (pontos.length === 0) return;
+
+    const pts = pontos.map(p => frameParaTela(p[0], p[1]));
+
+    // Preenchimento semi-transparente
+    if (pts.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 170, 255, 0.18)';
+        ctx.fill();
+    }
+
+    // Bordas do polígono
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    pts.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+    if (pts.length >= 3) ctx.closePath();
+    ctx.strokeStyle = '#00aaff';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([]);
+    ctx.stroke();
+
+    // Linha tracejada do último ponto ao primeiro (fechamento visual)
+    if (pts.length >= 2) {
+        ctx.beginPath();
+        ctx.moveTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+        ctx.lineTo(pts[0].x, pts[0].y);
+        ctx.strokeStyle = 'rgba(0,170,255,0.4)';
+        ctx.setLineDash([6, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // Pontos
+    pts.forEach((p, i) => {
+        // Círculo externo
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = (i === 0) ? '#00ffaa' : '#00aaff';
+        ctx.fill();
+        // Círculo interno branco
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        // Número do ponto
+        ctx.fillStyle = '#ffffff';
+        ctx.font      = 'bold 10px sans-serif';
+        ctx.fillText(i + 1, p.x + 9, p.y - 6);
+    });
+}
+
+// ── Atualiza UI ───────────────────────────────────────────────────────────
+function atualizarUI() {
+    document.getElementById('count-pontos').textContent = pontos.length;
+
+    const preview = document.getElementById('zona-preview');
+    const pcount  = document.getElementById('preview-count');
+    const pjson   = document.getElementById('preview-json');
+
+    if (pontos.length > 0) {
+        preview.style.display = 'block';
+        pcount.textContent    = pontos.length;
+        pjson.textContent     = JSON.stringify(pontos);
+    } else {
+        preview.style.display = 'none';
+    }
+    esconderStatus();
+}
+
+// ── Desfazer último ponto ─────────────────────────────────────────────────
+function desfazer() {
+    if (pontos.length > 0) {
+        pontos.pop();
+        redesenhar();
+        atualizarUI();
+    }
+}
+
+// ── Limpar tudo ───────────────────────────────────────────────────────────
+function limparZona() {
+    if (pontos.length === 0) return;
+    if (!confirm('Limpar todos os pontos?')) return;
+    pontos = [];
+    redesenhar();
+    atualizarUI();
+}
+
+// ── Salvar zona ───────────────────────────────────────────────────────────
+function salvarZona() {
+    const btn = document.getElementById('btn-salvar');
+
+    if (pontos.length > 0 && pontos.length < 3) {
+        mostrarStatus('Adicione pelo menos 3 pontos para definir a zona.', false);
+        return;
+    }
+
+    btn.disabled     = true;
+    btn.textContent  = '⏳ Salvando...';
+
+    fetch(`/camera/zona/${CAM_ID}/salvar`, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ pontos: pontos })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            const msg = pontos.length === 0
+                ? '✓ Zona removida. Sistema detecta a imagem toda.'
+                : `✓ Zona salva com ${pontos.length} pontos. Detecção ativa!`;
+            mostrarStatus(msg, true);
+        } else {
+            mostrarStatus('Erro: ' + (data.erro || 'Falha ao salvar.'), false);
+        }
+    })
+    .catch(e => mostrarStatus('Erro de conexão: ' + e, false))
+    .finally(() => {
+        btn.disabled    = false;
+        btn.textContent = '✓ Salvar Zona';
+    });
+}
+
+// ── Status ────────────────────────────────────────────────────────────────
+function mostrarStatus(msg, ok) {
+    const el = document.getElementById('status-bar');
+    el.textContent = msg;
+    el.className   = 'status-bar show ' + (ok ? 'ok' : 'erro');
+}
+function esconderStatus() {
+    document.getElementById('status-bar').className = 'status-bar';
+}
+
+// ── Carrega zona salva ────────────────────────────────────────────────────
+(function carregarZonaSalva() {
+    try {
+        let pts = ZONA_SALVA;
+        if (typeof pts === 'string' && pts) pts = JSON.parse(pts);
+        if (Array.isArray(pts) && pts.length >= 3) {
+            pontos = pts;
+            setTimeout(() => { redesenhar(); atualizarUI(); }, 800);
+        }
+    } catch(e) {}
+})();
+
+// ── Atalhos de teclado ────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey)) desfazer();
+    if (e.key === 'Escape') limparZona();
+    if (e.key === 'Enter')  salvarZona();
+});
+</script>
+{% endblock %}

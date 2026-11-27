@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Pessoas Cadastradas{% endblock %}
+
+{% block extra_css %}
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.page-title { font-size: 18px; font-weight: 600; }
+.page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Grid de pessoas ─────────────────────────────── */
+.pessoas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+}
+.pessoa-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+.pessoa-card:hover { border-color: rgba(0,170,255,0.3); }
+.pessoa-foto {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: var(--bg-input);
+    display: block;
+}
+.pessoa-info { padding: 10px; }
+.pessoa-nome {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pessoa-data {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.pessoa-acoes {
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+}
+
+/* ── Empty ───────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-muted);
+}
+.empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.3; }
+
+/* ── Alerta ──────────────────────────────────────── */
+.alerta-box {
+    background: rgba(204,34,0,0.08);
+    border: 1px solid rgba(204,34,0,0.2);
+    color: #ff6644;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+
+/* ── Dica upload ─────────────────────────────────── */
+.upload-dicas {
+    background: rgba(0,170,255,0.05);
+    border: 1px solid rgba(0,170,255,0.12);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+/* ── Preview da foto antes de enviar ─────────────── */
+.preview-foto {
+    width: 100%;
+    max-width: 180px;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 2px dashed var(--border);
+    margin: 10px auto 0;
+    display: none;
+}
+.preview-foto.show { display: block; }
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="page-header">
+        <div>
+            <div class="page-title">👤 Pessoas Cadastradas</div>
+            <div class="page-subtitle">
+                Cadastre fotos de pessoas conhecidas para reconhecimento facial
+            </div>
+        </div>
+        <div style="display:flex;gap:8px">
+            <a href="{{ url_for('ia.galeria_rostos') }}" class="btn btn-secondary btn-sm">
+                🖼️ Galeria de Detecções
+            </a>
+            <button class="btn btn-primary btn-sm" onclick="abrirModal()"
+                    {% if not facial_disponivel %}disabled{% endif %}>
+                + Cadastrar Pessoa
+            </button>
+        </div>
+    </div>
+
+    {% if not facial_disponivel %}
+    <div class="alerta-box">
+        ⚠️ Reconhecimento facial indisponível no servidor.
+        Instale: <code>pip install face_recognition dlib</code>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            {% if pessoas %}
+            <div class="pessoas-grid">
+                {% for p in pessoas %}
+                <div class="pessoa-card">
+                    <img src="{{ url_for('ia.servir_foto_pessoa', filename=p.foto_path) }}"
+                         class="pessoa-foto" alt="{{ p.nome }}">
+                    <div class="pessoa-info">
+                        <div class="pessoa-nome">{{ p.nome }}</div>
+                        <div class="pessoa-data">
+                            Cadastrado em {{ p.criado_em[:10] }}
+                        </div>
+                    </div>
+                    <div class="pessoa-acoes">
+                        <form method="POST"
+                              action="{{ url_for('ia.remover_pessoa', pessoa_id=p.id) }}"
+                              onsubmit="return confirm('Remover {{ p.nome }}?')">
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                    style="width:100%">
+                                ✕ Remover
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">👤</div>
+                <h3 style="color:var(--text-secondary);margin-bottom:8px">
+                    Nenhuma pessoa cadastrada
+                </h3>
+                <p>Cadastre pessoas para que o sistema possa identificá-las
+                    automaticamente nas câmeras.</p>
+                {% if facial_disponivel %}
+                <button class="btn btn-primary mt-2" onclick="abrirModal()">
+                    + Cadastrar Primeira Pessoa
+                </button>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal Cadastrar Pessoa ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-pessoa" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center">
+    <div class="modal-box" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;width:100%;max-width:420px;margin:20px">
+        <div class="modal-header" style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-weight:600">
+            👤 Cadastrar Pessoa
+            <button class="btn-close" onclick="fecharModal()"
+                    style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px">×</button>
+        </div>
+        <form method="POST"
+              action="{{ url_for('ia.adicionar_pessoa') }}"
+              enctype="multipart/form-data">
+            <div class="modal-body" style="padding:20px">
+
+                <div class="form-group">
+                    <label class="form-label">Nome da Pessoa *</label>
+                    <input type="text" name="nome" class="form-control"
+                           placeholder="Ex: João Silva" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Foto do Rosto *</label>
+                    <input type="file" name="foto" class="form-control"
+                           accept="image/jpeg,image/png" required
+                           onchange="previewFoto(this)">
+                    <div class="hint">JPG ou PNG · foto nítida, de frente</div>
+                    <img id="preview-img" class="preview-foto" alt="Preview">
+                </div>
+
+                <div class="upload-dicas">
+                    💡 <strong>Dicas para melhor reconhecimento:</strong><br>
+                    • Rosto de frente, bem iluminado<br>
+                    • Sem óculos escuros ou máscara<br>
+                    • Apenas 1 pessoa na foto<br>
+                    • Evite fotos muito antigas
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px">
+                <button type="button" class="btn btn-secondary" onclick="fecharModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    ✓ Cadastrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function abrirModal() {
+    document.getElementById('modal-pessoa').style.display = 'flex';
+}
+function fecharModal() {
+    document.getElementById('modal-pessoa').style.display = 'none';
+    document.getElementById('preview-img').classList.remove('show');
+}
+document.getElementById('modal-pessoa').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fecharModal();
+});
+
+function previewFoto(input) {
+    const img = document.getElementById('preview-img');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            img.src = e.target.result;
+            img.classList.add('show');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Controle PTZ · {{ cam.nome }}{% endblock %}
+
+{% block extra_css %}
+.page-title { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+.back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--text-muted); text-decoration: none;
+    font-size: 13px; margin-bottom: 16px;
+}
+.back-link:hover { color: var(--accent); }
+
+.alerta-indisponivel {
+    background: rgba(204,34,0,0.08);
+    border: 1px solid rgba(204,34,0,0.2);
+    color: #ff6644;
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+
+/* ── Layout principal: vídeo + controles ──────────────────── */
+.ptz-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+}
+@media (max-width: 950px) {
+    .ptz-layout { grid-template-columns: 1fr; }
+}
+
+/* ── Vídeo ────────────────────────────────────────────────── */
+.video-box {
+    position: relative;
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 2px solid var(--border);
+}
+.video-box img { width: 100%; display: block; }
+.video-moving-overlay {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: rgba(255,140,0,0.92);
+    color: #000;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 14px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    animation: blink 1s infinite;
+}
+.video-moving-overlay.show { display: flex; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+.video-patrulha-overlay {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: rgba(0,170,255,0.92);
+    color: #000;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 14px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+}
+.video-patrulha-overlay.show { display: flex; }
+
+/* ── Joystick ─────────────────────────────────────────────── */
+.joystick-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-top: 14px;
+    text-align: center;
+}
+.joystick-grid {
+    display: inline-grid;
+    grid-template-columns: repeat(3, 52px);
+    grid-template-rows: repeat(3, 52px);
+    gap: 6px;
+    margin: 10px 0;
+}
+.joy-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    user-select: none;
+    touch-action: none;
+}
+.joy-btn:hover { border-color: var(--accent); background: rgba(0,170,255,0.08); }
+.joy-btn:active, .joy-btn.pressing {
+    background: var(--accent);
+    color: #fff;
+    transform: scale(0.94);
+}
+.joy-btn.stop {
+    background: rgba(204,34,0,0.12);
+    border-color: rgba(204,34,0,0.3);
+    color: #ff4422;
+    font-size: 14px;
+}
+.joy-btn.stop:hover { background: rgba(204,34,0,0.22); }
+.joy-empty { visibility: hidden; }
+
+.zoom-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 10px;
+}
+.zoom-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 16px;
+    padding: 10px 22px;
+    cursor: pointer;
+    touch-action: none;
+}
+.zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+.zoom-btn:active { background: var(--accent); color: #fff; }
+
+.velocidade-box {
+    margin-top: 16px;
+    text-align: left;
+}
+.velocidade-box label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
+}
+.velocidade-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.velocidade-row input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-input);
+    outline: none;
+}
+.velocidade-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+}
+.velocidade-val {
+    min-width: 42px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 13px;
+}
+
+/* ── Seções laterais ──────────────────────────────────────── */
+.secao-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 20px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.secao-title .linha { flex: 1; height: 1px; background: var(--border); }
+
+/* ── Status de calibração / teste ─────────────────────────── */
+.calib-status {
+    font-size: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    margin-top: 10px;
+    display: none;
+    line-height: 1.6;
+}
+.calib-status.show { display: block; }
+.calib-status.ok {
+    background: rgba(0,170,68,0.1);
+    border: 1px solid rgba(0,170,68,0.25);
+    color: #00cc55;
+}
+.calib-status.erro {
+    background: rgba(204,34,0,0.1);
+    border: 1px solid rgba(204,34,0,0.25);
+    color: #ff4422;
+}
+.calib-status.loading {
+    background: rgba(0,170,255,0.08);
+    border: 1px solid rgba(0,170,255,0.2);
+    color: var(--accent);
+}
+
+.invert-row {
+    display: flex;
+    gap: 18px;
+    margin-top: 10px;
+}
+.invert-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.invert-check input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+.badge-calibrado {
+    background: rgba(0,204,85,0.12);
+    color: #00cc55;
+    border: 1px solid rgba(0,204,85,0.25);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+.badge-nao-calibrado {
+    background: rgba(255,170,0,0.12);
+    color: #ffaa00;
+    border: 1px solid rgba(255,170,0,0.25);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+/* ── Presets ──────────────────────────────────────────────── */
+.preset-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.preset-form input[type=text] { flex: 1; min-width: 110px; }
+.preset-form input[type=number] { width: 70px; }
+
+.preset-list { display: flex; flex-direction: column; gap: 6px; }
+.preset-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+}
+.preset-ordem {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.preset-ordem button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    padding: 1px 4px;
+}
+.preset-ordem button:hover { color: var(--accent); }
+.preset-nome {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.preset-tempo {
+    width: 52px;
+    padding: 4px 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 12px;
+    text-align: center;
+}
+.preset-acoes { display: flex; gap: 4px; }
+.preset-acoes button {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 5px 8px;
+}
+.preset-acoes button:hover { border-color: var(--accent); color: var(--accent); }
+.preset-acoes button.del:hover { border-color: #ff4422; color: #ff4422; }
+
+.empty-presets {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ── Modo de operação ─────────────────────────────────────── */
+.modo-grid-ptz {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.modo-card-ptz {
+    background: var(--bg-input);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+.modo-card-ptz:hover { border-color: rgba(0,170,255,0.3); }
+.modo-card-ptz.ativo {
+    border-color: var(--accent);
+    background: rgba(0,170,255,0.08);
+}
+.modo-card-ptz .icon { font-size: 22px; margin-bottom: 4px; }
+.modo-card-ptz .nome { font-size: 12px; font-weight: 600; }
+
+.patrulha-vel-box { margin-top: 12px; display: none; }
+.patrulha-vel-box.show { display: block; }
+
+/* ── Toggle ───────────────────────────────────────────────── */
+.switch {
+    position: relative; display: inline-block;
+    width: 44px; height: 24px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider-sw {
+    position: absolute; inset: 0;
+    background: var(--bg-input);
+    transition: .3s; border-radius: 24px;
+    border: 1px solid var(--border);
+}
+.slider-sw:before {
+    position: absolute; content: "";
+    height: 16px; width: 16px; left: 3px; bottom: 3px;
+    background: var(--text-muted); transition: .3s; border-radius: 50%;
+}
+input:checked + .slider-sw { background: var(--accent); border-color: var(--accent); }
+input:checked + .slider-sw:before { transform: translateX(20px); background: #fff; }
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <a href="{{ url_for('cameras.configuracoes') }}" class="back-link">
+        ← Voltar para Configurações
+    </a>
+
+    <div class="page-title">
+        🕹️ Controle PTZ · {{ cam.nome }}
+        {% if cam.ptz_calibrado %}
+            <span class="badge-calibrado">✓ Calibrada</span>
+        {% else %}
+            <span class="badge-nao-calibrado">⚠ Não calibrada</span>
+        {% endif %}
+    </div>
+    <div class="page-sub">{{ cam.ip }} · Protocolo ONVIF</div>
+
+    <div class="ptz-layout">
+
+        <!-- ═══════════ COLUNA ESQUERDA: Vídeo + Joystick ═══════════ -->
+        <div>
+            <div class="video-box">
+                <img src="{{ url_for('streaming.video_feed', cam_id=cam.id) }}"
+                     alt="{{ cam.nome }}" id="video-ptz">
+                <div class="video-moving-overlay" id="overlay-movendo">
+                    🕹️ Movendo...
+                </div>
+                <div class="video-patrulha-overlay" id="overlay-patrulha">
+                    🔄 Patrulhando
+                </div>
+            </div>
+
+            <!-- Joystick -->
+            <div class="joystick-card">
+                <div class="secao-title" style="margin-top:0">
+                    🕹️ Controle Manual
+                    <div class="linha"></div>
+                </div>
+
+                <div class="joystick-grid">
+                    <div class="joy-empty"></div>
+                    <button class="joy-btn" data-dir="cima" title="Cima">▲</button>
+                    <div class="joy-empty"></div>
+
+                    <button class="joy-btn" data-dir="esquerda" title="Esquerda">◀</button>
+                    <button class="joy-btn stop" id="btn-stop" title="Parar">⏹</button>
+                    <button class="joy-btn" data-dir="direita" title="Direita">▶</button>
+
+                    <div class="joy-empty"></div>
+                    <button class="joy-btn" data-dir="baixo" title="Baixo">▼</button>
+                    <div class="joy-empty"></div>
+                </div>
+
+                <div class="zoom-controls">
+                    <button class="zoom-btn" data-dir="zoom_out" title="Zoom -">🔍−</button>
+                    <button class="zoom-btn" data-dir="zoom_in"  title="Zoom +">🔍+</button>
+                </div>
+
+                <div class="velocidade-box">
+                    <label>Velocidade de Movimento</label>
+                    <div class="velocidade-row">
+                        <input type="range" id="vel-manual" min="0.1" max="1.0"
+                               step="0.1" value="{{ cam.ptz_velocidade_manual }}">
+                        <span class="velocidade-val" id="vel-manual-val">
+                            {{ (cam.ptz_velocidade_manual * 100)|int }}%
+                        </span>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:8px">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                style="flex:1" onclick="definirVelocidade(0.3)">🐢 Lenta</button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                style="flex:1" onclick="definirVelocidade(0.6)">🚶 Média</button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                style="flex:1" onclick="definirVelocidade(1.0)">⚡ Máxima</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════ COLUNA DIREITA: Configurações ═══════════ -->
+        <div>
+
+            <!-- Configuração ONVIF -->
+            <div class="card">
+                <div class="card-header">🌐 Conexão ONVIF</div>
+                <div class="card-body">
+                    <form method="POST"
+                          action="{{ url_for('ptz.salvar_config_ptz', cam_id=cam.id) }}">
+                        <div class="d-flex align-center"
+                             style="justify-content:space-between;margin-bottom:14px">
+                            <span style="font-size:13px;font-weight:600">
+                                Ativar PTZ nesta câmera
+                            </span>
+                            <label class="switch">
+                                <input type="checkbox" name="ptz_ativo" value="1"
+                                       {% if cam.ptz_ativo %}checked{% endif %}>
+                                <span class="slider-sw"></span>
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Controle (Control Type)</label>
+                            <select name="onvif_tipo" class="form-control">
+                                <option value="netcat_onvif"
+                                    {% if (cam.onvif_tipo or 'netcat_onvif') == 'netcat_onvif' %}selected{% endif %}>
+                                    Netcat ONVIF (SOAP direto) — recomendado
+                                </option>
+                                <option value="auto"
+                                    {% if cam.onvif_tipo == 'auto' %}selected{% endif %}>
+                                    Automático (testa vários caminhos)
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Dispositivo de Controle (Control Device)</label>
+                            <input type="text" name="onvif_caminho"
+                                   class="form-control"
+                                   value="{{ cam.onvif_caminho or '/onvif/deviceio_service' }}"
+                                   placeholder="/onvif/deviceio_service">
+                            <div class="hint">
+                                Caminho do serviço ONVIF. Yoosee:
+                                <code>/onvif/deviceio_service</code> ·
+                                outras marcas: <code>/onvif/device_service</code>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Porta ONVIF (Control Address)</label>
+                            <input type="number" name="onvif_porta"
+                                   class="form-control"
+                                   value="{{ cam.onvif_porta }}"
+                                   placeholder="5000">
+                            <div class="hint">
+                                Yoosee: 5000 · Outras marcas: 80, 8000 ou 8080
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Método de Parada</label>
+                            <select name="onvif_parada" class="form-control">
+                                <option value="auto"
+                                    {% if (cam.onvif_parada or 'auto') == 'auto' %}selected{% endif %}>
+                                    Automático (aprende o que a câmera aceita)
+                                </option>
+                                <option value="zero"
+                                    {% if cam.onvif_parada == 'zero' %}selected{% endif %}>
+                                    Velocidade zero (Yoosee)
+                                </option>
+                                <option value="stop"
+                                    {% if cam.onvif_parada == 'stop' %}selected{% endif %}>
+                                    Comando Stop oficial ONVIF
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Usuário ONVIF</label>
+                            <input type="text" name="onvif_usuario"
+                                   class="form-control"
+                                   value="{{ cam.onvif_usuario }}"
+                                   autocomplete="off">
+                        </div>
+                        <div class="form-group" style="margin-bottom:10px">
+                            <label class="form-label">Senha ONVIF</label>
+                            <input type="password" name="onvif_senha"
+                                   class="form-control"
+                                   value="{{ cam.onvif_senha }}"
+                                   autocomplete="off">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm"
+                                style="width:100%">
+                            ✓ Salvar Conexão
+                        </button>
+                    </form>
+
+                    <button class="btn btn-secondary btn-sm" id="btn-testar"
+                            style="width:100%;margin-top:8px"
+                            onclick="testarConexao()"
+                            {% if not cam.ptz_ativo %}disabled{% endif %}>
+                        🔌 Testar Conexão (usa a config salva)
+                    </button>
+                    <div class="calib-status" id="teste-status"></div>
+
+                    <!-- Calibração -->
+                    <div class="secao-title">
+                        🎯 Auto-Calibração
+                        <div class="linha"></div>
+                    </div>
+                    <div class="hint" style="margin-bottom:10px">
+                        O sistema move a câmera e analisa visualmente se os
+                        eixos estão invertidos — funciona com qualquer marca ONVIF.
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="btn-calibrar"
+                            style="width:100%" onclick="calibrar()"
+                            {% if not cam.ptz_ativo %}disabled{% endif %}>
+                        🎯 Calibrar Automaticamente
+                    </button>
+                    <div class="calib-status" id="calib-status"></div>
+
+                    <div class="invert-row">
+                        <label class="invert-check">
+                            <input type="checkbox" id="chk-invert-pan"
+                                   {% if cam.ptz_invert_pan %}checked{% endif %}
+                                   onchange="forcarInversao()">
+                            Inverter Pan
+                        </label>
+                        <label class="invert-check">
+                            <input type="checkbox" id="chk-invert-tilt"
+                                   {% if cam.ptz_invert_tilt %}checked{% endif %}
+                                   onchange="forcarInversao()">
+                            Inverter Tilt
+                        </label>
+                    </div>
+                    <div class="hint">
+                        Se ◀ e ▶ estiverem trocados, marque <b>Inverter Pan</b>
+                        (salva na hora). Se ▲ e ▼ estiverem trocados, marque
+                        <b>Inverter Tilt</b>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Presets -->
+            <div class="card mt-2">
+                <div class="card-header">📍 Posições (Presets)</div>
+                <div class="card-body">
+                    <form class="preset-form" onsubmit="adicionarPreset(event)">
+                        <input type="text" id="novo-preset-nome"
+                               class="form-control" placeholder="Nome da posição"
+                               required maxlength="40">
+                        <input type="number" id="novo-preset-tempo"
+                               class="form-control" value="8" min="2" max="300"
+                               title="Tempo de parada (s)">
+                        <button type="submit" class="btn btn-primary btn-sm"
+                                {% if not cam.ptz_ativo %}disabled{% endif %}>
+                            + Salvar
+                        </button>
+                    </form>
+                    <div class="hint" style="margin-bottom:10px">
+                        Posicione a câmera com o joystick e clique em "Salvar"
+                        para gravar a posição atual.
+                    </div>
+
+                    <div class="preset-list" id="preset-list">
+                        <!-- preenchido via JS -->
+                    </div>
+                    <div class="empty-presets" id="preset-empty" style="display:none">
+                        Nenhuma posição cadastrada ainda.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modo de Operação -->
+            <div class="card mt-2">
+                <div class="card-header">⚙ Modo de Operação</div>
+                <div class="card-body">
+                    <div class="modo-grid-ptz">
+                        <div class="modo-card-ptz {% if cam.modo_ptz != 'patrulha' %}ativo{% endif %}"
+                             id="modo-manual" onclick="selecionarModo('manual')">
+                            <div class="icon">🕹️</div>
+                            <div class="nome">Manual</div>
+                        </div>
+                        <div class="modo-card-ptz {% if cam.modo_ptz == 'patrulha' %}ativo{% endif %}"
+                             id="modo-patrulha" onclick="selecionarModo('patrulha')">
+                            <div class="icon">🔄</div>
+                            <div class="nome">Patrulha</div>
+                        </div>
+                    </div>
+
+                    <div class="patrulha-vel-box {% if cam.modo_ptz == 'patrulha' %}show{% endif %}"
+                         id="patrulha-vel-box">
+                        <label class="form-label">Velocidade da Patrulha</label>
+                        <div class="velocidade-row">
+                            <input type="range" id="vel-patrulha" min="0.1" max="1.0"
+                                   step="0.1" value="{{ cam.ptz_velocidade_patrulha }}">
+                            <span class="velocidade-val" id="vel-patrulha-val">
+                                {{ (cam.ptz_velocidade_patrulha * 100)|int }}%
+                            </span>
+                        </div>
+                        <div class="hint">
+                            A câmera percorrerá todas as posições cadastradas,
+                            em ordem, parando o tempo configurado em cada uma.
+                        </div>
+                    </div>
+
+                    <div id="patrulha-status" class="hint" style="margin-top:10px"></div>
+                </div>
+            </div>
+
+            <!-- Auto-Tracking -->
+            <div class="card mt-2">
+                <div class="card-header">🎯 Auto-Tracking (seguir alvo)</div>
+                <div class="card-body">
+                    <div class="d-flex align-center"
+                         style="justify-content:space-between;margin-bottom:10px">
+                        <span style="font-size:13px;font-weight:600">
+                            Seguir alvos detectados pela IA
+                        </span>
+                        <label class="switch">
+                            <input type="checkbox" id="chk-tracking"
+                                   {% if cam.ptz_tracking %}checked{% endif %}
+                                   onchange="salvarTracking()">
+                            <span class="slider-sw"></span>
+                        </label>
+                    </div>
+
+                    <div class="hint">
+                        A câmera seguirá: <b>{{ tracking_alvos }}</b>
+                        (conforme a configuração de IA desta câmera —
+                        <a href="{{ url_for('cameras.editor_ia', cam_id=cam.id) }}"
+                           style="color:var(--accent)">editar IA</a>).
+                        Sem alvo detectado, a câmera <b>não se move</b>.
+                        Joystick e patrulha têm prioridade/convivem com o tracking.
+                    </div>
+
+                    {% if not cam.ia_ativa %}
+                    <div class="alerta-indisponivel" style="margin-top:10px">
+                        ⚠️ A IA está desativada nesta câmera. Ative-a para o
+                        tracking funcionar.
+                    </div>
+                    {% endif %}
+
+                    <label class="form-label" style="margin-top:14px">
+                        Tolerância no centro da imagem
+                    </label>
+                    <div class="velocidade-row">
+                        <input type="range" id="track-zona" min="5" max="50"
+                               step="5" value="{{ cam.ptz_tracking_zona or 20 }}">
+                        <span class="velocidade-val" id="track-zona-val">
+                            {{ cam.ptz_tracking_zona or 20 }}%
+                        </span>
+                    </div>
+                    <div class="hint">
+                        Maior = move menos e fica mais estável ·
+                        Menor = centraliza com mais precisão.
+                    </div>
+
+                    <div id="tracking-status" class="hint"
+                         style="margin-top:8px;color:var(--accent)"></div>
+
+                    <button class="btn btn-secondary btn-sm" id="btn-medir-vel"
+                            style="width:100%;margin-top:12px"
+                            onclick="medirVelocidade()"
+                            {% if not cam.ptz_ativo %}disabled{% endif %}>
+                        ⏱ Medir velocidade real da câmera
+                    </button>
+                    <div class="calib-status" id="vel-status"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CAM_ID = {{ cam.id }};
+let presets  = {{ presets | tojson }};
+let modoAtual = "{{ cam.modo_ptz }}";
+
+// ══════════════════════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════════════════════
+function postJSON(url, body) {
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    }).then(r => r.json());
+}
+
+// ══════════════════════════════════════════════════════════════
+// Joystick - Movimento Contínuo
+// ══════════════════════════════════════════════════════════════
+let moveTimer    = null;
+let direcaoAtiva = null;
+let enviando     = false;
+
+function velocidadeAtual() {
+    return parseFloat(document.getElementById('vel-manual').value);
+}
+
+function iniciarMovimento(direcao) {
+    if (direcaoAtiva === direcao) return;
+    direcaoAtiva = direcao;
+
+    document.querySelectorAll('.joy-btn, .zoom-btn').forEach(b => {
+        b.classList.toggle('pressing', b.dataset.dir === direcao);
+    });
+    document.getElementById('overlay-movendo').classList.add('show');
+
+    const enviar = () => {
+        if (enviando || direcaoAtiva !== direcao) return;  // sem fila de requisições
+        enviando = true;
+        postJSON(`/api/ptz/${CAM_ID}/mover`, {
+            direcao: direcao,
+            velocidade: velocidadeAtual()
+        }).catch(() => {}).finally(() => { enviando = false; });
+    };
+    enviar();
+    clearInterval(moveTimer);
+    moveTimer = setInterval(enviar, 1200); // mantém o comando vivo
+}
+
+// forcar=true → botão ⏹ (sempre envia). Demais eventos só enviam
+// se realmente havia um movimento ativo (evita 4 "parar" por clique).
+function pararMovimento(forcar) {
+    if (forcar !== true && direcaoAtiva === null) return;
+
+    direcaoAtiva = null;
+    clearInterval(moveTimer);
+    document.querySelectorAll('.joy-btn, .zoom-btn').forEach(b => {
+        b.classList.remove('pressing');
+    });
+    document.getElementById('overlay-movendo').classList.remove('show');
+    postJSON(`/api/ptz/${CAM_ID}/parar`).catch(() => {});
+}
+
+document.querySelectorAll('[data-dir]').forEach(btn => {
+    const dir = btn.dataset.dir;
+    btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        iniciarMovimento(dir);
+    });
+    btn.addEventListener('pointerup',     () => pararMovimento());
+    btn.addEventListener('pointerleave',  () => pararMovimento());
+    btn.addEventListener('pointercancel', () => pararMovimento());
+});
+document.getElementById('btn-stop').addEventListener('click',
+    () => pararMovimento(true));
+
+// Slider de velocidade manual
+const velManual = document.getElementById('vel-manual');
+velManual.addEventListener('input', function () {
+    document.getElementById('vel-manual-val').textContent =
+        Math.round(this.value * 100) + '%';
+});
+velManual.addEventListener('change', function () {
+    salvarVelocidade(parseFloat(this.value));
+});
+
+function salvarVelocidade(v) {
+    postJSON(`/api/ptz/${CAM_ID}/velocidade`, { velocidade: v }).catch(() => {});
+}
+
+function definirVelocidade(v) {
+    velManual.value = v;
+    document.getElementById('vel-manual-val').textContent =
+        Math.round(v * 100) + '%';
+    salvarVelocidade(v);
+}
+
+// ══════════════════════════════════════════════════════════════
+// Testar conexão
+// ══════════════════════════════════════════════════════════════
+function testarConexao() {
+    const btn    = document.getElementById('btn-testar');
+    const status = document.getElementById('teste-status');
+
+    btn.disabled = true;
+    status.className = 'calib-status show loading';
+    status.textContent = 'Testando conexão ONVIF...';
+
+    postJSON(`/api/ptz/${CAM_ID}/testar`)
+        .then(data => {
+            if (data.ok) {
+                status.className = 'calib-status show ok';
+                status.innerHTML =
+                    '✓ Conectado!<br>' +
+                    'Caminho: <b>' + data.caminho + '</b><br>' +
+                    'Perfil: <b>' + data.perfil + '</b><br>' +
+                    'Autenticação: <b>' + data.auth + '</b>';
+            } else {
+                status.className = 'calib-status show erro';
+                status.textContent = '✕ ' + (data.erro || 'Falha ao conectar.');
+            }
+        })
+        .catch(e => {
+            status.className = 'calib-status show erro';
+            status.textContent = '✕ Erro: ' + e;
+        })
+        .finally(() => { btn.disabled = false; });
+}
+
+// ══════════════════════════════════════════════════════════════
+// Calibração
+// ══════════════════════════════════════════════════════════════
+function calibrar() {
+    const btn    = document.getElementById('btn-calibrar');
+    const status = document.getElementById('calib-status');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Calibrando... (não mexa na câmera)';
+    status.className = 'calib-status show loading';
+    status.textContent = 'Movendo a câmera e analisando a imagem, aguarde alguns segundos...';
+
+    postJSON(`/api/ptz/${CAM_ID}/calibrar`)
+        .then(data => {
+            if (data.ok) {
+                status.className = 'calib-status show ok';
+                let msg = '✓ ' + (data.mensagem || 'Calibração concluída.');
+                if (data.pan_detectado) {
+                    msg += `<br>Pan: ${data.invert_pan ? 'invertido' : 'normal'}`;
+                    document.getElementById('chk-invert-pan').checked = data.invert_pan;
+                }
+                if (data.tilt_detectado) {
+                    msg += `<br>Tilt: ${data.invert_tilt ? 'invertido' : 'normal'}`;
+                    document.getElementById('chk-invert-tilt').checked = data.invert_tilt;
+                }
+                status.innerHTML = msg;
+            } else {
+                status.className = 'calib-status show erro';
+                status.textContent = '✕ ' + (data.mensagem || data.erro || 'Falha na calibração.');
+            }
+        })
+        .catch(e => {
+            status.className = 'calib-status show erro';
+            status.textContent = '✕ Erro de conexão: ' + e;
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = '🎯 Calibrar Automaticamente';
+        });
+}
+
+function forcarInversao() {
+    const invertPan  = document.getElementById('chk-invert-pan').checked;
+    const invertTilt = document.getElementById('chk-invert-tilt').checked;
+    postJSON(`/api/ptz/${CAM_ID}/inverter`, {
+        invert_pan: invertPan,
+        invert_tilt: invertTilt
+    }).catch(() => {});
+}
+
+// ══════════════════════════════════════════════════════════════
+// Presets
+// ══════════════════════════════════════════════════════════════
+function renderPresets() {
+    const list  = document.getElementById('preset-list');
+    const empty = document.getElementById('preset-empty');
+
+    list.innerHTML = '';
+    if (!presets.length) {
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+
+    presets.sort((a, b) => a.ordem - b.ordem);
+
+    presets.forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.className = 'preset-item';
+        item.innerHTML = `
+            <div class="preset-ordem">
+                <button onclick="moverPreset(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>▲</button>
+                <button onclick="moverPreset(${idx}, 1)" ${idx === presets.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
+            <div class="preset-nome" title="${p.nome}">${idx + 1}. ${p.nome}</div>
+            <input type="number" class="preset-tempo" value="${p.tempo_parada}"
+                   min="2" max="300"
+                   onchange="atualizarTempo(${p.id}, this.value)" title="Tempo de parada (s)">
+            <div class="preset-acoes">
+                <button onclick="irParaPreset(${p.id})" title="Ir para esta posição">▶</button>
+                <button class="del" onclick="removerPreset(${p.id})" title="Remover">🗑</button>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+renderPresets();
+
+function adicionarPreset(e) {
+    e.preventDefault();
+    const nomeInput  = document.getElementById('novo-preset-nome');
+    const tempoInput = document.getElementById('novo-preset-tempo');
+    const nome  = nomeInput.value.trim();
+    const tempo = parseInt(tempoInput.value || 8);
+
+    if (!nome) return;
+
+    postJSON(`/api/ptz/${CAM_ID}/presets/adicionar`, { nome, tempo_parada: tempo })
+        .then(data => {
+            if (data.ok) {
+                presets.push({
+                    id: data.id, nome, token: data.token,
+                    ordem: presets.length, tempo_parada: tempo
+                });
+                renderPresets();
+                nomeInput.value = '';
+            } else {
+                alert('Erro: ' + (data.erro || 'Falha ao salvar posição.'));
+            }
+        })
+        .catch(e => alert('Erro de conexão: ' + e));
+}
+
+function moverPreset(idx, delta) {
+    const novoIdx = idx + delta;
+    if (novoIdx < 0 || novoIdx >= presets.length) return;
+    [presets[idx], presets[novoIdx]] = [presets[novoIdx], presets[idx]];
+    presets.forEach((p, i) => p.ordem = i);
+    renderPresets();
+    postJSON(`/api/ptz/${CAM_ID}/presets/reordenar`, {
+        ordem: presets.map(p => p.id)
+    }).catch(() => {});
+}
+
+function atualizarTempo(presetId, valor) {
+    const tempo = Math.max(2, Math.min(300, parseInt(valor) || 8));
+    const p = presets.find(p => p.id === presetId);
+    if (p) p.tempo_parada = tempo;
+    postJSON(`/api/ptz/${CAM_ID}/presets/${presetId}/tempo`, { tempo_parada: tempo })
+        .catch(() => {});
+}
+
+function irParaPreset(presetId) {
+    postJSON(`/api/ptz/${CAM_ID}/presets/${presetId}/ir`).catch(() => {});
+}
+
+function removerPreset(presetId) {
+    if (!confirm('Remover esta posição?')) return;
+    postJSON(`/api/ptz/${CAM_ID}/presets/${presetId}/remover`)
+        .then(data => {
+            if (data.ok) {
+                presets = presets.filter(p => p.id !== presetId);
+                renderPresets();
+            } else {
+                alert('Erro: ' + (data.erro || 'Falha ao remover.'));
+            }
+        })
+        .catch(e => alert('Erro de conexão: ' + e));
+}
+
+// ══════════════════════════════════════════════════════════════
+// Modo de Operação (Manual / Patrulha)
+// ══════════════════════════════════════════════════════════════
+function selecionarModo(modo) {
+    if (modo === 'patrulha' && presets.length === 0) {
+        alert('Cadastre ao menos 1 posição antes de ativar a patrulha.');
+        return;
+    }
+
+    const velPatrulha = parseFloat(document.getElementById('vel-patrulha').value);
+
+    postJSON(`/api/ptz/${CAM_ID}/modo`, {
+        modo: modo,
+        velocidade_patrulha: velPatrulha
+    }).then(data => {
+        if (data.ok) {
+            modoAtual = data.modo;
+            document.getElementById('modo-manual').classList.toggle('ativo', modo === 'manual');
+            document.getElementById('modo-patrulha').classList.toggle('ativo', modo === 'patrulha');
+            document.getElementById('patrulha-vel-box').classList.toggle('show', modo === 'patrulha');
+            atualizarStatusPatrulha();
+        } else {
+            alert('Erro: ' + (data.erro || 'Falha ao definir modo.'));
+        }
+    }).catch(e => alert('Erro de conexão: ' + e));
+}
+
+const velPatrulha = document.getElementById('vel-patrulha');
+velPatrulha.addEventListener('input', function () {
+    document.getElementById('vel-patrulha-val').textContent =
+        Math.round(this.value * 100) + '%';
+});
+velPatrulha.addEventListener('change', function () {
+    if (modoAtual === 'patrulha') selecionarModo('patrulha');
+});
+
+// ══════════════════════════════════════════════════════════════
+// Status em tempo real (patrulha ativa)
+// ══════════════════════════════════════════════════════════════
+function atualizarStatusPatrulha() {
+    fetch(`/api/ptz/${CAM_ID}/status`)
+        .then(r => r.json())
+        .then(data => {
+            const overlay = document.getElementById('overlay-patrulha');
+            const status  = document.getElementById('patrulha-status');
+            overlay.classList.toggle('show', data.patrulha_ativa);
+            status.textContent = data.patrulha_ativa
+                ? '🔄 Patrulha em execução...'
+                : '';
+            const ts = document.getElementById('tracking-status');
+            if (ts) {
+                ts.textContent = data.tracking_ativo
+                    ? '🎯 ' + (data.tracking_msg || 'Ativo')
+                    : '';
+            }
+        })
+        .catch(() => {});
+}
+
+setInterval(atualizarStatusPatrulha, 2000);
+atualizarStatusPatrulha();
+
+
+// ══════════════════════════════════════════════════════════════
+// Auto-Tracking
+// ══════════════════════════════════════════════════════════════
+const chkTracking = document.getElementById('chk-tracking');
+const trackZona   = document.getElementById('track-zona');
+
+trackZona.addEventListener('input', function () {
+    document.getElementById('track-zona-val').textContent = this.value + '%';
+});
+trackZona.addEventListener('change', salvarTracking);
+
+function salvarTracking() {
+    postJSON(`/api/ptz/${CAM_ID}/tracking`, {
+        ativo: chkTracking.checked,
+        zona: parseInt(trackZona.value)
+    }).then(data => {
+        if (!data.ok) {
+            chkTracking.checked = false;
+            alert(data.erro || 'Falha ao salvar o tracking.');
+        }
+        atualizarStatusPatrulha();
+    }).catch(e => {
+        chkTracking.checked = false;
+        alert('Erro de conexão: ' + e);
+    });
+}
+
+function medirVelocidade() {
+    const btn = document.getElementById('btn-medir-vel');
+    const st  = document.getElementById('vel-status');
+    btn.disabled = true;
+    st.className = 'calib-status show loading';
+    st.textContent = 'Medindo... a câmera vai girar um pouco (~15 s). Não mexa.';
+
+    postJSON(`/api/ptz/${CAM_ID}/medir_velocidade`)
+        .then(d => {
+            if (d.ok) {
+                let t = '<b>Velocidade medida (pixels/seg):</b><br>';
+                d.resultados.forEach(r => {
+                    t += `${Math.round(r.velocidade * 100)}% → ${r.px_por_s} px/s<br>`;
+                });
+                st.className = 'calib-status show ok';
+                st.innerHTML = t + '<br>' + d.conclusao;
+            } else {
+                st.className = 'calib-status show erro';
+                st.textContent = '✕ ' + (d.erro || 'Falha na medição.');
+            }
+        })
+        .catch(e => {
+            st.className = 'calib-status show erro';
+            st.textContent = '✕ Erro: ' + e;
+        })
+        .finally(() => { btn.disabled = false; });
+}
+
+// Fallback: solta o joystick se o ponteiro soltar fora do botão
+// ou a janela perder o foco (só envia se havia movimento ativo)
+document.addEventListener('pointerup', () => pararMovimento());
+window.addEventListener('blur',        () => pararMovimento());
+</script>
+{% endblock %}

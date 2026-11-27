@@ -1,0 +1,17 @@
+# ── Core ──────────────────────────────────────────
+Flask
+Flask-Login
+opencv-python
+numpy
+
+# ── Inteligência Artificial ──────────────────────
+ultralytics          # YOLOv8 - detecção de objetos
+torch            # Backend de IA (CPU por padrão)
+torchvision
+face_recognition     # Reconhecimento facial
+dlib                # Dependência do face_recognition
+
+# ── Utilitários ───────────────────────────────────
+Pillow
+
+#  sudo apt update && sudo apt install ffmpeg -y  sudo apt install -y cmake build-essential libopenblas-dev liblapack-dev

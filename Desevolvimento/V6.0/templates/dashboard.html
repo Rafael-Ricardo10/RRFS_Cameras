@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Monitor{% endblock %}
+
+{% block extra_css %}
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.page-title small {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 8px;
+}
+
+/* ── Stats ───────────────────────────────────────── */
+.stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.stat-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+.stat-num {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+}
+.stat-label { color: var(--text-muted); font-size: 11px; }
+
+/* ── Grid de câmeras ─────────────────────────────── */
+.cameras-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
+}
+
+.camera-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.camera-card:hover   { border-color: rgba(0,170,255,0.3); }
+.camera-card.online  { border-color: rgba(0,204,85,0.2);  }
+.camera-card.gravando { border-color: rgba(255,60,60,0.5); }
+
+.camera-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+}
+.camera-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.camera-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.camera-badges {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* ── Badge gravando ──────────────────────────────── */
+.badge-gravando {
+    background: rgba(255,40,40,0.15);
+    color: #ff4444;
+    border: 1px solid rgba(255,40,40,0.3);
+    animation: blink 1s infinite;
+}
+.badge-noturno {
+    background: rgba(100,100,200,0.15);
+    color: #aaaaff;
+    border: 1px solid rgba(100,100,200,0.3);
+}
+.badge-ia {
+    background: rgba(0,170,255,0.15);
+    color: #00aaff;
+    border: 1px solid rgba(0,170,255,0.3);
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+}
+
+/* ── Vídeo ───────────────────────────────────────── */
+.video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    overflow: hidden;
+}
+.video-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.video-overlay {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 6px;
+    border-radius: 3px;
+    pointer-events: none;
+}
+.video-overlay-rec {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-size: 11px;
+    color: #ff4444;
+    background: rgba(0,0,0,0.6);
+    padding: 3px 8px;
+    border-radius: 3px;
+    display: none;
+    align-items: center;
+    gap: 4px;
+    animation: blink 1s infinite;
+}
+.video-overlay-rec.show { display: flex; }
+
+/* ── Overlay de IA (nomes identificados) ──────────── */
+.video-overlay-ia {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    max-width: 75%;
+    pointer-events: none;
+}
+.badge-pessoa-nome {
+    background: rgba(0,204,85,0.92);
+    color: #000;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.badge-pessoa-desconhecida {
+    background: rgba(255,140,0,0.92);
+    color: #000;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+/* ── Vazio ───────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+}
+.empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text-secondary); }
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="page-header">
+        <div>
+            <div class="page-title">
+                ⊞ Monitor ao Vivo
+                <small id="hora-atual"></small>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px">
+            <a href="{{ url_for('ia.galeria_rostos') }}" class="btn btn-secondary btn-sm">
+                🖼️ Galeria IA
+            </a>
+            <a href="{{ url_for('cameras.configuracoes') }}" class="btn btn-secondary btn-sm">
+                ⚙ Configurações
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div>
+                <div class="stat-num">{{ cameras|length }}</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <span style="font-size:18px;opacity:.4">📷</span>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-num" style="color:var(--online)"
+                     id="count-online">
+                    {{ cameras|selectattr('online')|list|length }}
+                </div>
+                <div class="stat-label">Online</div>
+            </div>
+            <span style="font-size:18px;opacity:.4">🟢</span>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-num" style="color:var(--offline)"
+                     id="count-offline">
+                    {{ cameras|rejectattr('online')|list|length }}
+                </div>
+                <div class="stat-label">Offline</div>
+            </div>
+            <span style="font-size:18px;opacity:.4">🔴</span>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-num" style="color:#ff4444"
+                     id="count-gravando">0</div>
+                <div class="stat-label">Gravando</div>
+            </div>
+            <span style="font-size:18px;opacity:.4">⏺</span>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-num" style="color:var(--accent)"
+                     id="count-ia">
+                    {{ cameras|selectattr('ia_ativa')|list|length }}
+                </div>
+                <div class="stat-label">Com IA</div>
+            </div>
+            <span style="font-size:18px;opacity:.4">🧠</span>
+        </div>
+    </div>
+
+    {% if cameras %}
+    <div class="cameras-grid" id="cameras-grid">
+        {% for cam in cameras %}
+        <div class="camera-card {% if cam.online %}online{% endif %}"
+             id="card-{{ cam.id }}">
+
+            <div class="camera-header">
+                <div style="overflow:hidden">
+                    <div class="camera-name">{{ cam.nome }}</div>
+                    <div class="camera-meta">{{ cam.ip }}:{{ cam.porta }}</div>
+                </div>
+                <div class="camera-badges">
+                    <span class="badge badge-ia"
+                          id="badge-ia-{{ cam.id }}"
+                          style="display:none"
+                          title="Objetos detectados">
+                        🧠 <span id="ia-objetos-{{ cam.id }}"></span>
+                    </span>
+                    <span class="badge badge-noturno"
+                          id="badge-noturno-{{ cam.id }}"
+                          style="display:none">🌙 Noturno</span>
+                    <span class="badge badge-gravando"
+                          id="badge-gravando-{{ cam.id }}"
+                          style="display:none">⏺ REC</span>
+                    <span class="badge
+                        {% if cam.online %}badge-online{% else %}badge-offline{% endif %}"
+                          id="badge-{{ cam.id }}">
+                        <span class="dot
+                            {% if cam.online %}dot-online{% else %}dot-offline{% endif %}"
+                              id="dot-{{ cam.id }}"></span>
+                        <span id="status-{{ cam.id }}">
+                            {{ 'Online' if cam.online else 'Offline' }}
+                        </span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="video-container">
+                <img src="{{ url_for('streaming.video_feed', cam_id=cam.id) }}"
+                     alt="{{ cam.nome }}"
+                     id="video-{{ cam.id }}"
+                     loading="lazy">
+                <div class="video-overlay-rec" id="rec-overlay-{{ cam.id }}">
+                    ● REC
+                </div>
+                <div class="video-overlay-ia" id="ia-overlay-{{ cam.id }}"></div>
+                <div class="video-overlay">CAM {{ cam.id }}</div>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon">📷</div>
+            <h3>Nenhuma câmera configurada</h3>
+            <p>Vá em Configurações para adicionar suas câmeras IP.</p>
+            <a href="{{ url_for('cameras.configuracoes') }}"
+               class="btn btn-primary mt-2">
+                ⚙ Ir para Configurações
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Relógio ──────────────────────────────────────────────────────────────
+function atualizarHora() {
+    const agora = new Date();
+    document.getElementById('hora-atual').textContent =
+        agora.toLocaleTimeString('pt-BR');
+}
+atualizarHora();
+setInterval(atualizarHora, 1000);
+
+// ── Pausa streams quando aba fica em background ──────────────────────────
+document.addEventListener('visibilitychange', function () {
+    document.querySelectorAll('.video-container img').forEach(img => {
+        if (document.hidden) {
+            if (!img.dataset.src) img.dataset.src = img.src;
+            img.src = '';
+        } else {
+            if (img.dataset.src) img.src = img.dataset.src;
+        }
+    });
+});
+
+// ── Atualiza status das câmeras a cada 5s ───────────────────────────────
+(function () {
+    let statusInterval = null;
+
+    function atualizarStatus() {
+        fetch('{{ url_for("cameras.api_status") }}')
+            .then(r => r.json())
+            .then(data => {
+                let online   = 0;
+                let offline  = 0;
+                let gravando = 0;
+                let comIa    = 0;
+
+                data.forEach(cam => {
+                    const badge     = document.getElementById('badge-'         + cam.id);
+                    const dot       = document.getElementById('dot-'           + cam.id);
+                    const status    = document.getElementById('status-'        + cam.id);
+                    const card      = document.getElementById('card-'          + cam.id);
+                    const badgeGrav = document.getElementById('badge-gravando-'+ cam.id);
+                    const recOv     = document.getElementById('rec-overlay-'   + cam.id);
+                    const badgeNot  = document.getElementById('badge-noturno-' + cam.id);
+                    const badgeIa   = document.getElementById('badge-ia-'      + cam.id);
+                    const iaObjetos = document.getElementById('ia-objetos-'    + cam.id);
+                    const iaOverlay = document.getElementById('ia-overlay-'    + cam.id);
+
+                    if (!badge) return;
+
+                    // Status online/offline
+                    if (cam.online) {
+                        badge.className    = 'badge badge-online';
+                        dot.className      = 'dot dot-online';
+                        status.textContent = 'Online';
+                        card.classList.add('online');
+                        online++;
+                    } else {
+                        badge.className    = 'badge badge-offline';
+                        dot.className      = 'dot dot-offline';
+                        status.textContent = 'Offline';
+                        card.classList.remove('online');
+                        offline++;
+                    }
+
+                    // Status gravando
+                    if (cam.gravando) {
+                        badgeGrav.style.display = 'inline-flex';
+                        recOv.classList.add('show');
+                        card.classList.add('gravando');
+                        gravando++;
+                    } else {
+                        badgeGrav.style.display = 'none';
+                        recOv.classList.remove('show');
+                        card.classList.remove('gravando');
+                    }
+
+                    // Modo noturno
+                    if (badgeNot) {
+                        badgeNot.style.display = cam.noturno
+                            ? 'inline-flex' : 'none';
+                    }
+
+                    // ── IA: contador geral ──────────────────────────────
+                    if (cam.ia_ativa) comIa++;
+
+                    // ── IA: objetos detectados (badge no header) ────────
+                    const temObjetos = cam.objetos_detectados &&
+                                       cam.objetos_detectados.length > 0;
+                    const temPessoas = cam.pessoas_detectadas &&
+                                       cam.pessoas_detectadas.length > 0;
+
+                    if (badgeIa && cam.ia_ativa && (temObjetos || temPessoas)) {
+                        const tipos = [...new Set(cam.objetos_detectados || [])];
+                        badgeIa.style.display = 'inline-flex';
+                        iaObjetos.textContent = tipos.length
+                            ? tipos.join(', ')
+                            : 'detectando...';
+                    } else if (badgeIa) {
+                        badgeIa.style.display = 'none';
+                    }
+
+                    // ── IA: overlay de pessoas identificadas no vídeo ───
+                    if (iaOverlay) {
+                        iaOverlay.innerHTML = '';
+                        if (temPessoas) {
+                            cam.pessoas_detectadas.forEach(p => {
+                                const span = document.createElement('span');
+                                const conhecido = p.confianca && p.confianca > 0;
+                                span.className = conhecido
+                                    ? 'badge-pessoa-nome'
+                                    : 'badge-pessoa-desconhecida';
+                                span.textContent = conhecido
+                                    ? `${p.nome} ${p.confianca}%`
+                                    : 'Desconhecido';
+                                iaOverlay.appendChild(span);
+                            });
+                        }
+                    }
+                });
+
+                // Atualiza contadores
+                const co = document.getElementById('count-online');
+                const cf = document.getElementById('count-offline');
+                const cg = document.getElementById('count-gravando');
+                const ci = document.getElementById('count-ia');
+                if (co) co.textContent = online;
+                if (cf) cf.textContent = offline;
+                if (cg) cg.textContent = gravando;
+                if (ci) ci.textContent = comIa;
+            })
+            .catch(() => {});
+    }
+
+    function iniciarPolling() {
+        atualizarStatus();
+        if (!statusInterval) {
+            statusInterval = setInterval(atualizarStatus, 5000);
+        }
+    }
+
+    function pararPolling() {
+        if (statusInterval) {
+            clearInterval(statusInterval);
+            statusInterval = null;
+        }
+    }
+
+    // Primeira carga
+    setTimeout(iniciarPolling, 3000);
+
+    // Pausa/retoma polling conforme visibilidade da aba (evita trabalho
+    // desnecessário em background e reduz uso de memória/CPU)
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            pararPolling();
+        } else {
+            iniciarPolling();
+        }
+    });
+
+    // Limpa ao sair da página
+    window.addEventListener('beforeunload', pararPolling);
+})();
+</script>
+{% endblock %}

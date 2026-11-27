@@ -1,0 +1,683 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Eventos Gravados{% endblock %}
+
+{% block extra_css %}
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* ── Filtros ──────────────────────────────────────── */
+.filtros-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 20px;
+}
+.filtros-form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+.filtro-group {
+    flex: 1;
+    min-width: 180px;
+}
+.filtro-label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.filtro-select, .filtro-date {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+.filtro-select:focus, .filtro-date:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,170,255,0.15);
+}
+.filtro-select option {
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+.filtro-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ── Filtros ativos ───────────────────────────────── */
+.filtros-ativos {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.filtro-ativo {
+    background: rgba(0,170,255,0.12);
+    border: 1px solid rgba(0,170,255,0.25);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.filtro-ativo strong { font-weight: 600; }
+
+/* ── Estatísticas ─────────────────────────────────── */
+.stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 200px;
+}
+.stat-icon { font-size: 32px; opacity: 0.6; }
+.stat-info h3 {
+    font-size: 24px;
+    color: var(--accent);
+    font-weight: 700;
+}
+.stat-info p {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-input);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+    transition: width 0.3s ease;
+}
+
+/* ── Grid de Eventos ──────────────────────────────── */
+.eventos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* ── Card do evento ───────────────────────────────── */
+.evento-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+}
+.evento-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+/* ── Thumbnail ────────────────────────────────────── */
+.evento-thumb {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #111;
+    overflow: hidden;
+}
+
+/* Imagem thumbnail (lazy loaded) */
+.evento-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.3s;
+}
+
+/* Vídeo de preview - NÃO carrega ao abrir a página */
+.evento-thumb .preview-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;   /* começa oculto e SEM src */
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+/* Ao hover: esconde img, mostra vídeo */
+.evento-card:hover .evento-thumb img {
+    opacity: 0;
+}
+.evento-card:hover .evento-thumb .preview-video {
+    display: block;
+    opacity: 1;
+}
+
+/* Ícone play */
+.evento-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 46px;
+    height: 46px;
+    background: rgba(0,170,255,0.88);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #fff;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+.evento-card:hover .evento-play { opacity: 0; }
+
+/* Loading spinner no hover */
+.evento-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(0,170,255,0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    pointer-events: none;
+}
+.evento-card:hover .evento-loading { display: block; }
+.evento-card.video-pronto .evento-loading { display: none; }
+
+@keyframes spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ── Info do card ─────────────────────────────────── */
+.evento-info { padding: 12px; }
+.evento-camera {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+.evento-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.evento-data {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.evento-duracao {
+    background: var(--bg-input);
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+/* ── Modal de Vídeo ───────────────────────────────── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+.modal-overlay.show { display: flex; }
+
+@keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+}
+
+.modal-video {
+    width: 90%;
+    max-width: 1200px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    overflow: hidden;
+}
+.modal-video-header {
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.modal-video-body { background: #000; }
+.modal-video-body video {
+    width: 100%;
+    display: block;
+    max-height: 70vh;
+}
+.modal-video-footer {
+    padding: 12px 20px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    line-height: 1;
+}
+.btn-close:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+}
+{% endblock %}
+
+
+{% block content %}
+<div class="content">
+    <div class="page-header">
+        <div class="page-title">📹 Eventos Gravados</div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-bar">
+        <form method="GET"
+              action="{{ url_for('eventos.listar_eventos') }}"
+              class="filtros-form">
+            <div class="filtro-group">
+                <label class="filtro-label">📷 Câmera</label>
+                <select name="camera" class="filtro-select">
+                    <option value="">Todas as Câmeras</option>
+                    {% for cam in cameras %}
+                    <option value="{{ cam.id }}"
+                        {% if filtro_camera == cam.id|string %}selected{% endif %}>
+                        {{ cam.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filtro-group">
+                <label class="filtro-label">📅 Data</label>
+                <input type="date"
+                       name="data"
+                       class="filtro-date"
+                       value="{{ filtro_data }}"
+                       max="{{ now().strftime('%Y-%m-%d') }}">
+            </div>
+
+            <div class="filtro-actions">
+                <button type="submit" class="btn btn-primary">
+                    🔍 Filtrar
+                </button>
+                <a href="{{ url_for('eventos.listar_eventos') }}"
+                   class="btn btn-secondary">
+                    ✕ Limpar
+                </a>
+            </div>
+        </form>
+
+        <!-- Filtros Ativos -->
+        {% if filtro_camera or filtro_data %}
+        <div class="filtros-ativos">
+            <span style="font-size:11px;color:var(--text-muted)">
+                Filtros ativos:
+            </span>
+            {% if filtro_camera %}
+                {% set camera_nome = cameras
+                    |selectattr('id','equalto', filtro_camera|int)
+                    |map(attribute='nome')|first %}
+                <span class="filtro-ativo">
+                    📷 <strong>{{ camera_nome or 'Câmera #' + filtro_camera }}</strong>
+                </span>
+            {% endif %}
+            {% if filtro_data %}
+                <span class="filtro-ativo">
+                    📅 <strong>{{ filtro_data }}</strong>
+                </span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-info">
+                <h3>{{ eventos|length }}</h3>
+                <p>
+                    {% if filtro_camera or filtro_data %}
+                        Eventos Filtrados
+                    {% else %}
+                        Total de Eventos
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div class="stat-card" style="flex:2">
+            <div class="stat-icon">💾</div>
+            <div class="stat-info">
+                <h3>
+                    <span id="espaco-usado">…</span>GB /
+                    <span id="espaco-total">…</span>GB
+                </h3>
+                <p>Armazenamento Utilizado</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"
+                         id="progress-fill"
+                         style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid de Eventos -->
+    {% if eventos %}
+    <div class="eventos-grid" id="eventos-grid">
+        {% for evento in eventos %}
+        <div class="evento-card"
+             data-arquivo="{{ evento.arquivo_video }}"
+             data-thumb="{{ evento.arquivo_thumb }}"
+             data-camera="{{ evento.camera_nome }}"
+             data-data="{{ evento.data_evento }}"
+             data-duracao="{{ evento.duracao }}"
+             onclick="abrirVideo(this)">
+
+            <div class="evento-thumb">
+                <!-- Thumbnail: carrega lazy via IntersectionObserver -->
+                <img
+                    data-src="{{ url_for('eventos.servir_thumb', filename=evento.arquivo_thumb) }}"
+                    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'%3E%3Crect width='16' height='9' fill='%23111'/%3E%3C/svg%3E"
+                    alt="Evento {{ evento.id }}"
+                    class="lazy-thumb">
+
+                <!-- Vídeo preview: src é definido apenas no hover -->
+                <video
+                    class="preview-video"
+                    muted
+                    loop
+                    preload="none"
+                    data-src="{{ url_for('eventos.servir_video', filename=evento.arquivo_video) }}">
+                </video>
+
+                <!-- Spinner de carregamento (visível só no hover) -->
+                <div class="evento-loading"></div>
+
+                <!-- Ícone play (visível enquanto não está em hover) -->
+                <div class="evento-play">▶</div>
+            </div>
+
+            <div class="evento-info">
+                <div class="evento-camera">{{ evento.camera_nome }}</div>
+                <div class="evento-meta">
+                    <div class="evento-data">
+                        <span>{{ evento.data_evento[:10] }}</span>
+                        <span>{{ evento.data_evento[11:19] }}</span>
+                    </div>
+                    <div class="evento-duracao">{{ evento.duracao }}s</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon">
+                {% if filtro_camera or filtro_data %}🔍{% else %}📹{% endif %}
+            </div>
+            <h3>
+                {% if filtro_camera or filtro_data %}
+                    Nenhum evento encontrado
+                {% else %}
+                    Nenhum evento gravado
+                {% endif %}
+            </h3>
+            <p>
+                {% if filtro_camera or filtro_data %}
+                    Tente ajustar os filtros.
+                {% else %}
+                    Ative a gravação nas câmeras para começar a detectar movimento.
+                {% endif %}
+            </p>
+            {% if filtro_camera or filtro_data %}
+            <a href="{{ url_for('eventos.listar_eventos') }}"
+               class="btn btn-secondary mt-2">
+                ✕ Limpar Filtros
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de Vídeo -->
+<div class="modal-overlay" id="modal-video">
+    <div class="modal-video">
+        <div class="modal-video-header">
+            <div>
+                <strong id="video-titulo"></strong><br>
+                <small id="video-info"
+                       style="color:var(--text-muted)"></small>
+            </div>
+            <button class="btn-close" onclick="fecharVideo()">×</button>
+        </div>
+        <div class="modal-video-body">
+            <video id="player" controls preload="metadata"></video>
+        </div>
+        <div class="modal-video-footer">
+            <a id="btn-download" href="#"
+               class="btn btn-secondary btn-sm" download>
+                ⬇ Download
+            </a>
+            <button class="btn btn-primary btn-sm"
+                    onclick="fecharVideo()">
+                ✓ Fechar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+// ══════════════════════════════════════════════════════════════════
+// 1. LAZY LOAD DE THUMBNAILS (IntersectionObserver)
+//    Carrega a imagem só quando o card entra na viewport
+// ══════════════════════════════════════════════════════════════════
+(function () {
+    const observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            const img = entry.target;
+            if (img.dataset.src) {
+                img.src = img.dataset.src;
+                delete img.dataset.src;
+            }
+            observer.unobserve(img);
+        });
+    }, { rootMargin: '200px' }); // pré-carrega 200px antes de aparecer
+
+    document.querySelectorAll('img.lazy-thumb').forEach(function (img) {
+        observer.observe(img);
+    });
+})();
+
+
+// ══════════════════════════════════════════════════════════════════
+// 2. PREVIEW DE VÍDEO NO HOVER
+//    O src do vídeo é definido APENAS quando o mouse entra no card.
+//    Ao sair, o vídeo é pausado e o src é limpo para liberar memória.
+// ══════════════════════════════════════════════════════════════════
+(function () {
+    // Tempo mínimo que o mouse deve ficar para começar a carregar (ms)
+    const HOVER_DELAY = 300;
+
+    document.querySelectorAll('.evento-card').forEach(function (card) {
+        const video  = card.querySelector('.preview-video');
+        if (!video) return;
+
+        let timer = null;
+
+        card.addEventListener('mouseenter', function () {
+            timer = setTimeout(function () {
+                // Define src apenas agora (lazy)
+                if (!video.src || video.src === window.location.href) {
+                    video.src = video.dataset.src;
+                }
+                video.play().catch(function () {});
+                card.classList.add('video-pronto');
+            }, HOVER_DELAY);
+        });
+
+        card.addEventListener('mouseleave', function () {
+            clearTimeout(timer);
+            video.pause();
+            video.currentTime = 0;
+            // Remove src para liberar conexão/memória
+            video.removeAttribute('src');
+            video.load();
+            card.classList.remove('video-pronto');
+        });
+
+        // Quando o vídeo começa a tocar, esconde o spinner
+        video.addEventListener('playing', function () {
+            card.classList.add('video-pronto');
+        });
+    });
+})();
+
+
+// ══════════════════════════════════════════════════════════════════
+// 3. ESTATÍSTICAS DE ARMAZENAMENTO
+// ══════════════════════════════════════════════════════════════════
+function atualizarEstatisticas() {
+    fetch('{{ url_for("eventos.estatisticas") }}')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.getElementById('espaco-usado').textContent =
+                data.tamanho_gb;
+            document.getElementById('espaco-total').textContent =
+                data.limite_gb;
+            document.getElementById('progress-fill').style.width =
+                data.percentual + '%';
+        })
+        .catch(function () {});
+}
+
+atualizarEstatisticas();
+setInterval(atualizarEstatisticas, 30000);
+
+
+// ══════════════════════════════════════════════════════════════════
+// 4. MODAL DE VÍDEO
+//    Carrega o vídeo somente quando o usuário clica no card
+// ══════════════════════════════════════════════════════════════════
+const BASE_VIDEO    = '{{ url_for("eventos.servir_video",    filename="") }}';
+const BASE_DOWNLOAD = '{{ url_for("eventos.download_video",  filename="") }}';
+
+function abrirVideo(card) {
+    const arquivo  = card.dataset.arquivo;
+    const camera   = card.dataset.camera;
+    const data     = card.dataset.data;
+    const duracao  = card.dataset.duracao;
+
+    const modal    = document.getElementById('modal-video');
+    const player   = document.getElementById('player');
+    const titulo   = document.getElementById('video-titulo');
+    const info     = document.getElementById('video-info');
+    const btnDl    = document.getElementById('btn-download');
+
+    titulo.textContent = camera;
+    info.textContent   = data + ' • ' + duracao + 's';
+
+    // Só define o src ao clicar (não antes!)
+    player.src = BASE_VIDEO + arquivo;
+    player.load();
+    player.play().catch(function () {});
+
+    btnDl.href     = BASE_DOWNLOAD + arquivo;
+    btnDl.download = arquivo;
+
+    modal.classList.add('show');
+}
+
+function fecharVideo() {
+    const modal  = document.getElementById('modal-video');
+    const player = document.getElementById('player');
+
+    player.pause();
+    player.removeAttribute('src');
+    player.load();
+
+    modal.classList.remove('show');
+}
+
+// Fecha ao clicar no fundo escuro
+document.getElementById('modal-video')
+    .addEventListener('click', function (e) {
+        if (e.target === this) fecharVideo();
+    });
+
+// Fecha com ESC
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') fecharVideo();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Login{% endblock %}
+
+{% block extra_css %}
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.login-box { width: 100%; max-width: 380px; }
+.login-logo {
+    text-align: center;
+    margin-bottom: 32px;
+}
+.login-logo h1 {
+    font-size: 28px;
+    color: var(--accent);
+    letter-spacing: 1px;
+}
+.login-logo h1 span { color: var(--text-primary); }
+.login-logo p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+.login-icon {
+    width: 64px; height: 64px;
+    background: linear-gradient(135deg, rgba(0,170,255,0.2), rgba(0,170,255,0.05));
+    border: 1px solid rgba(0,170,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 16px;
+}
+.erro-box {
+    background: rgba(204,34,0,0.1);
+    border: 1px solid rgba(204,34,0,0.3);
+    color: #ff4422;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <div class="login-logo">
+            <div class="login-icon">📷</div>
+            <h1>RRFS <span>Cameras</span></h1>
+            <p>Sistema de Monitoramento IP</p>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Autenticação</div>
+            <div class="card-body">
+                {% if erro %}
+                <div class="erro-box">✕ {{ erro }}</div>
+                {% endif %}
+
+                <form method="POST" autocomplete="off">
+                    <div class="form-group">
+                        <label class="form-label">Usuário</label>
+                        <input type="text" name="usuario"
+                               class="form-control"
+                               placeholder="Digite seu usuário"
+                               required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="senha"
+                               class="form-control"
+                               placeholder="Digite sua senha"
+                               required>
+                    </div>
+                    <button type="submit" class="btn btn-primary"
+                            style="width:100%; justify-content:center; margin-top:8px;">
+                        → Entrar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center text-muted mt-2" style="font-size:11px;">
+            RRFS Cameras &nbsp;|&nbsp; Servidor 0.0.0.0:2900
+        </p>
+    </div>
+</div>
+{% endblock %}

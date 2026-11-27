@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Primeiro Acesso{% endblock %}
+
+{% block extra_css %}
+.setup-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.setup-box {
+    width: 100%;
+    max-width: 400px;
+}
+.setup-logo {
+    text-align: center;
+    margin-bottom: 32px;
+}
+.setup-logo h1 {
+    font-size: 28px;
+    color: var(--accent);
+    letter-spacing: 1px;
+}
+.setup-logo h1 span { color: var(--text-primary); }
+.setup-logo p {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-top: 4px;
+}
+.setup-badge {
+    display: inline-block;
+    background: rgba(0,170,255,0.1);
+    border: 1px solid rgba(0,170,255,0.25);
+    color: var(--accent);
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    margin-top: 6px;
+}
+.erro-box {
+    background: rgba(204,34,0,0.1);
+    border: 1px solid rgba(204,34,0,0.3);
+    color: #ff4422;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="setup-container">
+    <div class="setup-box">
+        <div class="setup-logo">
+            <h1>RRFS <span>Cameras</span></h1>
+            <p>Sistema de Monitoramento IP</p>
+            <span class="setup-badge">✦ Primeiro Acesso</span>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                🔑 Criar Administrador
+            </div>
+            <div class="card-body">
+                {% if erro %}
+                <div class="erro-box">✕ {{ erro }}</div>
+                {% endif %}
+
+                <form method="POST" autocomplete="off">
+                    <div class="form-group">
+                        <label class="form-label">Usuário</label>
+                        <input type="text" name="usuario"
+                               class="form-control"
+                               placeholder="Mínimo 3 caracteres"
+                               minlength="3" required autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="senha"
+                               class="form-control"
+                               placeholder="Mínimo 6 caracteres"
+                               minlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirmar Senha</label>
+                        <input type="password" name="confirma"
+                               class="form-control"
+                               placeholder="Repita a senha"
+                               minlength="6" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary"
+                            style="width:100%; justify-content:center; margin-top:8px;">
+                        ✓ Criar e Entrar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center text-muted mt-2" style="font-size:11px;">
+            RRFS Cameras &nbsp;|&nbsp; Servidor 0.0.0.0:2900
+        </p>
+    </div>
+</div>
+{% endblock %}

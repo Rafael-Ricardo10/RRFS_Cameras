@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Galeria de Rostos{% endblock %}
+
+{% block extra_css %}
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.page-title { font-size: 18px; font-weight: 600; }
+.page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Filtros ─────────────────────────────────────── */
+.filtros-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+.filtro-group { min-width: 160px; }
+.filtro-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+/* ── Grid de rostos ──────────────────────────────── */
+.rostos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+}
+.rosto-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.rosto-card.conhecido  { border-color: rgba(0,204,85,0.25); }
+.rosto-card.desconhecido { border-color: rgba(255,140,0,0.25); }
+.rosto-card:hover { transform: translateY(-2px); }
+
+.rosto-img-box { position: relative; aspect-ratio: 1; background: var(--bg-input); }
+.rosto-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: pointer;
+}
+.rosto-badge {
+    position: absolute;
+    top: 6px; left: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.rosto-badge.conhecido {
+    background: rgba(0,204,85,0.9);
+    color: #000;
+}
+.rosto-badge.desconhecido {
+    background: rgba(255,140,0,0.9);
+    color: #000;
+}
+
+.rosto-info { padding: 8px 10px; }
+.rosto-nome {
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rosto-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.rosto-conf {
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 600;
+}
+.rosto-acoes { padding: 0 10px 8px; }
+
+/* ── Empty ───────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--text-muted);
+}
+.empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.3; }
+
+/* ── Modal visualização ──────────────────────────── */
+.modal-img-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+.modal-img-overlay.show { display: flex; }
+.modal-img-overlay img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 8px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="page-header">
+        <div>
+            <div class="page-title">🖼️ Galeria de Rostos Detectados</div>
+            <div class="page-subtitle">
+                Histórico de pessoas identificadas pelas câmeras
+            </div>
+        </div>
+        <a href="{{ url_for('ia.listar_pessoas') }}" class="btn btn-secondary btn-sm">
+            👤 Pessoas Cadastradas
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <form method="GET" class="card" style="margin-bottom:20px">
+        <div class="card-body">
+            <div class="filtros-bar">
+                <div class="filtro-group">
+                    <label>Câmera</label>
+                    <select name="camera" class="form-control" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        {% for cam in cameras %}
+                        <option value="{{ cam.id }}"
+                            {% if filtro_camera == cam.id|string %}selected{% endif %}>
+                            {{ cam.nome }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filtro-group">
+                    <label>Status</label>
+                    <select name="status" class="form-control" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        <option value="conhecido" {% if filtro_status == 'conhecido' %}selected{% endif %}>
+                            ✓ Conhecidos
+                        </option>
+                        <option value="desconhecido" {% if filtro_status == 'desconhecido' %}selected{% endif %}>
+                            ⚠ Desconhecidos
+                        </option>
+                    </select>
+                </div>
+                {% if filtro_camera or filtro_status %}
+                <a href="{{ url_for('ia.galeria_rostos') }}" class="btn btn-secondary btn-sm">
+                    ✕ Limpar filtros
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- Grid -->
+    <div class="card">
+        <div class="card-body">
+            {% if rostos %}
+            <div class="rostos-grid">
+                {% for r in rostos %}
+                {% set conhecido = r.pessoa_id is not none %}
+                <div class="rosto-card {{ 'conhecido' if conhecido else 'desconhecido' }}">
+                    <div class="rosto-img-box">
+                        <img src="{{ url_for('ia.servir_rosto_evento', filename=r.foto_rosto) }}"
+                             class="rosto-img" alt="{{ r.nome_identificado }}"
+                             onclick="ampliarImagem(this.src)">
+                        <span class="rosto-badge {{ 'conhecido' if conhecido else 'desconhecido' }}">
+                            {{ '✓' if conhecido else '⚠' }}
+                        </span>
+                    </div>
+                    <div class="rosto-info">
+                        <div class="rosto-nome">{{ r.nome_identificado }}</div>
+                        <div class="rosto-meta">📷 {{ r.camera_nome }}</div>
+                        <div class="rosto-meta">{{ r.data_deteccao[:16] }}</div>
+                        {% if conhecido %}
+                        <div class="rosto-conf">{{ r.confianca }}% confiança</div>
+                        {% endif %}
+                    </div>
+                    <div class="rosto-acoes">
+                        <form method="POST"
+                              action="{{ url_for('ia.remover_rosto_evento', rosto_id=r.id) }}"
+                              onsubmit="return confirm('Remover este registro?')">
+                            <button type="submit" class="btn btn-secondary btn-sm"
+                                    style="width:100%;font-size:11px">
+                                ✕ Remover
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">🖼️</div>
+                <h3 style="color:var(--text-secondary);margin-bottom:8px">
+                    Nenhum rosto detectado ainda
+                </h3>
+                <p>Ative a IA e o reconhecimento facial nas câmeras para
+                    começar a identificar pessoas automaticamente.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de visualização ampliada -->
+<div class="modal-img-overlay" id="modal-img" onclick="this.classList.remove('show')">
+    <img id="modal-img-content" src="" alt="Ampliado">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function ampliarImagem(src) {
+    document.getElementById('modal-img-content').src = src;
+    document.getElementById('modal-img').classList.add('show');
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.getElementById('modal-img').classList.remove('show');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,614 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Configurar IA{% endblock %}
+
+{% block extra_css %}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+.back-link:hover { color: var(--accent); }
+
+/* ── Hardware Status ─────────────────────────────── */
+.hw-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.hw-banner.cpu {
+    background: rgba(255,170,0,0.08);
+    border: 1px solid rgba(255,170,0,0.2);
+}
+.hw-banner.gpu {
+    background: rgba(0,204,85,0.08);
+    border: 1px solid rgba(0,204,85,0.2);
+}
+.hw-info { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.hw-icon { font-size: 22px; }
+.hw-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+.hw-badge.cpu { background: rgba(255,170,0,0.15); color: #ffaa00; }
+.hw-badge.gpu { background: rgba(0,204,85,0.15); color: #00cc55; }
+
+/* ── Toggle principal ─────────────────────────────── */
+.ia-master-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+}
+.ia-master-toggle.ativo { border-color: rgba(0,170,255,0.4); }
+.ia-master-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ia-master-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* ── Switch grande ────────────────────────────────── */
+.switch-lg {
+    position: relative;
+    display: inline-block;
+    width: 54px; height: 30px;
+    flex-shrink: 0;
+}
+.switch-lg input { opacity: 0; width: 0; height: 0; }
+.switch-lg .slider {
+    position: absolute; inset: 0;
+    background: var(--bg-input);
+    transition: .3s;
+    border-radius: 30px;
+    border: 1px solid var(--border);
+}
+.switch-lg .slider:before {
+    position: absolute;
+    content: "";
+    height: 22px; width: 22px;
+    left: 3px; bottom: 3px;
+    background: var(--text-muted);
+    transition: .3s;
+    border-radius: 50%;
+}
+.switch-lg input:checked + .slider {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.switch-lg input:checked + .slider:before {
+    transform: translateX(24px);
+    background: #fff;
+}
+
+/* ── Seção de opções (desabilitada quando IA off) ─── */
+.ia-opcoes {
+    transition: opacity 0.3s;
+}
+.ia-opcoes.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.secao-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 22px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.secao-title .linha {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* ── Cards de categoria ──────────────────────────── */
+.categorias-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+}
+.categoria-card {
+    background: var(--bg-input);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.categoria-card:hover { border-color: rgba(0,170,255,0.3); }
+.categoria-card.checked {
+    border-color: var(--accent);
+    background: rgba(0,170,255,0.08);
+}
+.categoria-card input {
+    position: absolute;
+    opacity: 0;
+}
+.categoria-icon { font-size: 26px; margin-bottom: 6px; }
+.categoria-nome { font-size: 13px; font-weight: 600; }
+.categoria-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.categoria-check {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: transparent;
+}
+.categoria-card.checked .categoria-check {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+/* ── Modo de Gravação ─────────────────────────────── */
+.modo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+.modo-card {
+    background: var(--bg-input);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.modo-card:hover { border-color: rgba(0,170,255,0.3); }
+.modo-card.checked {
+    border-color: var(--accent);
+    background: rgba(0,170,255,0.08);
+}
+.modo-card input { position: absolute; opacity: 0; }
+.modo-icon { font-size: 20px; margin-bottom: 6px; }
+.modo-nome { font-size: 13px; font-weight: 600; }
+.modo-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.4; }
+
+/* ── Select pessoa específica ─────────────────────── */
+.pessoa-alvo-box {
+    display: none;
+    margin-top: 14px;
+    padding: 14px;
+    background: rgba(0,170,255,0.05);
+    border: 1px solid rgba(0,170,255,0.15);
+    border-radius: var(--radius);
+}
+.pessoa-alvo-box.show { display: block; }
+
+/* ── Slider de confiança ───────────────────────────── */
+.confianca-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 6px;
+}
+.confianca-box input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-input);
+    outline: none;
+}
+.confianca-box input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+}
+.confianca-valor {
+    min-width: 50px;
+    text-align: right;
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 14px;
+}
+
+/* ── Alerta facial indisponível ───────────────────── */
+.alerta-indisponivel {
+    background: rgba(204,34,0,0.08);
+    border: 1px solid rgba(204,34,0,0.2);
+    color: #ff6644;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Aviso informativo (azul) ─────────────────────── */
+.alerta-info {
+    background: rgba(0,170,255,0.06);
+    border: 1px solid rgba(0,170,255,0.18);
+    color: var(--text-secondary);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    margin-top: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+}
+
+/* ── Footer sticky ────────────────────────────────── */
+.form-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-primary);
+    padding: 16px 0;
+    margin-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <a href="{{ url_for('cameras.configuracoes') }}" class="back-link">
+        ← Voltar para Configurações
+    </a>
+
+    <div class="page-title">🧠 Inteligência Artificial · {{ cam.nome }}</div>
+    <div class="page-subtitle">
+        Configure detecção de objetos e reconhecimento facial para esta câmera
+    </div>
+
+    <!-- Status de Hardware -->
+    <div class="hw-banner {{ 'gpu' if hardware.gpu_disponivel else 'cpu' }}">
+        <div class="hw-info">
+            <span class="hw-icon">{{ '🎮' if hardware.gpu_disponivel else '🖥️' }}</span>
+            <div>
+                <strong>
+                    {% if hardware.gpu_disponivel %}
+                        GPU: {{ hardware.gpu_nome }}
+                    {% else %}
+                        Processando via CPU
+                    {% endif %}
+                </strong>
+                <div style="color:var(--text-muted);font-size:11px;margin-top:2px">
+                    {% if hardware.gpu_disponivel %}
+                        Alta performance · múltiplas câmeras com IA simultânea
+                    {% else %}
+                        Performance adequada para poucas câmeras com IA ativa
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <span class="hw-badge {{ 'gpu' if hardware.gpu_disponivel else 'cpu' }}">
+            {{ 'GPU ATIVA' if hardware.gpu_disponivel else 'CPU' }}
+        </span>
+    </div>
+
+    {% if not objetos_disponivel %}
+    <div class="alerta-indisponivel">
+        ⚠️ Detecção de objetos indisponível. Instale: <code>pip install ultralytics torch</code>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('cameras.salvar_ia', cam_id=cam.id) }}">
+
+        <!-- Toggle Master -->
+        <div class="ia-master-toggle {{ 'ativo' if cam.ia_ativa }}" id="master-box">
+            <div>
+                <div class="ia-master-title">
+                    🧠 Ativar Inteligência Artificial
+                </div>
+                <div class="ia-master-desc">
+                    Liga o motor de detecção de objetos e reconhecimento facial nesta câmera
+                </div>
+            </div>
+            <label class="switch-lg">
+                <input type="checkbox" name="ia_ativa" value="1"
+                       id="ia-ativa-check"
+                       {% if cam.ia_ativa %}checked{% endif %}
+                       {% if not objetos_disponivel %}disabled{% endif %}
+                       onchange="toggleMaster()">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="ia-opcoes {{ '' if cam.ia_ativa else 'disabled' }}" id="opcoes-ia">
+
+            <!-- O que detectar -->
+            <div class="secao-title">
+                🎯 O que detectar nesta câmera
+                <div class="linha"></div>
+            </div>
+
+            <div class="categorias-grid">
+                <label class="categoria-card {{ 'checked' if cam.detectar_pessoa }}"
+                       id="card-pessoa">
+                    <input type="checkbox" name="detectar_pessoa" value="1"
+                           {% if cam.detectar_pessoa %}checked{% endif %}
+                           onchange="toggleCard('pessoa'); atualizarAvisoMovimento();">
+                    <span class="categoria-check">✓</span>
+                    <div class="categoria-icon">🚶</div>
+                    <div class="categoria-nome">Pessoas</div>
+                    <div class="categoria-desc">Detecta pessoas na cena</div>
+                </label>
+
+                <label class="categoria-card {{ 'checked' if cam.detectar_veiculo }}"
+                       id="card-veiculo">
+                    <input type="checkbox" name="detectar_veiculo" value="1"
+                           {% if cam.detectar_veiculo %}checked{% endif %}
+                           onchange="toggleCard('veiculo'); atualizarAvisoMovimento();">
+                    <span class="categoria-check">✓</span>
+                    <div class="categoria-icon">🚗</div>
+                    <div class="categoria-nome">Veículos</div>
+                    <div class="categoria-desc">Carro, moto, caminhão, ônibus</div>
+                </label>
+
+                <label class="categoria-card {{ 'checked' if cam.detectar_animal }}"
+                       id="card-animal">
+                    <input type="checkbox" name="detectar_animal" value="1"
+                           {% if cam.detectar_animal %}checked{% endif %}
+                           onchange="toggleCard('animal'); atualizarAvisoMovimento();">
+                    <span class="categoria-check">✓</span>
+                    <div class="categoria-icon">🐾</div>
+                    <div class="categoria-nome">Animais</div>
+                    <div class="categoria-desc">Cachorro, gato</div>
+                </label>
+            </div>
+
+            <!-- Reconhecimento Facial -->
+            <div class="secao-title">
+                👤 Reconhecimento Facial
+                <div class="linha"></div>
+            </div>
+
+            <div class="categoria-card {{ 'checked' if cam.reconhecimento_facial }}"
+                 id="card-facial" style="max-width:100%">
+                <label style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                    <div>
+                        <div class="categoria-nome" style="font-size:14px">
+                            🔍 Identificar pessoas cadastradas
+                        </div>
+                        <div class="categoria-desc">
+                            Compara rostos detectados com o banco de pessoas conhecidas
+                            e mostra nome + confiança
+                        </div>
+                    </div>
+                    <label class="switch-lg" style="margin-left:14px">
+                        <input type="checkbox" name="reconhecimento_facial" value="1"
+                               id="facial-check"
+                               {% if cam.reconhecimento_facial %}checked{% endif %}
+                               {% if not facial_disponivel %}disabled{% endif %}
+                               onchange="toggleCard('facial')">
+                        <span class="slider"></span>
+                    </label>
+                </label>
+            </div>
+
+            {% if not facial_disponivel %}
+            <div class="alerta-indisponivel">
+                ⚠️ Reconhecimento facial indisponível.
+                Instale: <code>pip install face_recognition dlib</code>
+            </div>
+            {% else %}
+            <div class="hint" style="margin-top:8px">
+                💡 Gerencie as pessoas cadastradas em
+                <a href="{{ url_for('ia.listar_pessoas') }}" style="color:var(--accent)">
+                    Pessoas Cadastradas
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Modo de Gravação -->
+            <div class="secao-title">
+                ⏺ Quando gravar
+                <div class="linha"></div>
+            </div>
+
+            <div class="modo-grid">
+                <label class="modo-card {{ 'checked' if cam.modo_gravacao == 'movimento' }}">
+                    <input type="radio" name="modo_gravacao" value="movimento"
+                           {% if cam.modo_gravacao == 'movimento' or cam.modo_gravacao not in ('pessoa_especifica',) %}checked{% endif %}
+                           onchange="atualizarModo()">
+                    <div class="modo-icon">👁️</div>
+                    <div class="modo-nome">Qualquer Movimento</div>
+                    <div class="modo-desc" id="desc-movimento">
+                        Grava ao detectar movimento (modo tradicional)
+                    </div>
+                </label>
+
+                <label class="modo-card {{ 'checked' if cam.modo_gravacao == 'pessoa_especifica' }}"
+                       id="card-modo-especifica">
+                    <input type="radio" name="modo_gravacao" value="pessoa_especifica"
+                           {% if cam.modo_gravacao == 'pessoa_especifica' %}checked{% endif %}
+                           onchange="atualizarModo()">
+                    <div class="modo-icon">🎯</div>
+                    <div class="modo-nome">Pessoa Específica</div>
+                    <div class="modo-desc">Só grava quando reconhece alguém específico</div>
+                </label>
+            </div>
+
+            <!-- Aviso dinâmico explicando o comportamento do modo "Qualquer Movimento" -->
+            <div class="alerta-info" id="aviso-movimento">
+                <span>💡</span>
+                <span id="aviso-movimento-texto"></span>
+            </div>
+
+            <!-- Seletor de pessoa específica -->
+            <div class="pessoa-alvo-box {{ 'show' if cam.modo_gravacao == 'pessoa_especifica' }}"
+                 id="pessoa-alvo-box">
+                <label class="form-label">Gravar apenas quando reconhecer:</label>
+                {% if pessoas %}
+                <select name="pessoa_alvo_id" class="form-control">
+                    <option value="">Qualquer pessoa cadastrada</option>
+                    {% for p in pessoas %}
+                    <option value="{{ p.id }}"
+                        {% if cam.pessoa_alvo_id == p.id %}selected{% endif %}>
+                        {{ p.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <div class="hint">
+                    Nenhuma pessoa cadastrada ainda.
+                    <a href="{{ url_for('ia.listar_pessoas') }}" style="color:var(--accent)">
+                        Cadastre uma pessoa primeiro →
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Confiança Mínima -->
+            <div class="secao-title">
+                🎚️ Sensibilidade da IA
+                <div class="linha"></div>
+            </div>
+
+            <label class="form-label">Confiança Mínima de Detecção</label>
+            <div class="confianca-box">
+                <input type="range" name="confianca_minima_range"
+                       min="10" max="95" step="5"
+                       value="{{ (cam.confianca_minima * 100) | int }}"
+                       oninput="document.getElementById('conf-val').textContent = this.value + '%'; document.getElementById('conf-hidden').value = this.value / 100">
+                <span class="confianca-valor" id="conf-val">
+                    {{ (cam.confianca_minima * 100) | int }}%
+                </span>
+            </div>
+            <input type="hidden" name="confianca_minima" id="conf-hidden"
+                   value="{{ cam.confianca_minima }}">
+            <div class="hint">
+                Valores mais altos = menos falsos positivos, porém pode perder detecções reais.
+                Recomendado: 50-60%
+            </div>
+
+        </div>
+
+        <div class="form-footer">
+            <a href="{{ url_for('cameras.configuracoes') }}" class="btn btn-secondary">
+                Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary">
+                ✓ Salvar Configuração de IA
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleMaster() {
+    const checked = document.getElementById('ia-ativa-check').checked;
+    const box     = document.getElementById('opcoes-ia');
+    const master  = document.getElementById('master-box');
+    box.classList.toggle('disabled', !checked);
+    master.classList.toggle('ativo', checked);
+}
+
+function toggleCard(tipo) {
+    const input = document.querySelector(`input[name="detectar_${tipo}"]`) ||
+                  document.getElementById('facial-check');
+    const card  = document.getElementById(`card-${tipo}`);
+    if (input && card) {
+        card.classList.toggle('checked', input.checked);
+    }
+}
+
+function atualizarModo() {
+    document.querySelectorAll('.modo-card').forEach(card => {
+        const input = card.querySelector('input[type="radio"]');
+        card.classList.toggle('checked', input.checked);
+    });
+
+    const especifica = document.querySelector(
+        'input[name="modo_gravacao"][value="pessoa_especifica"]'
+    ).checked;
+    document.getElementById('pessoa-alvo-box').classList.toggle('show', especifica);
+
+    document.getElementById('aviso-movimento').style.display =
+        especifica ? 'none' : 'flex';
+}
+
+// ── CORREÇÃO: aviso dinâmico explicando o comportamento do modo
+//    "Qualquer Movimento" de acordo com as categorias marcadas ──────────
+function atualizarAvisoMovimento() {
+    const pessoa  = document.querySelector('input[name="detectar_pessoa"]').checked;
+    const veiculo = document.querySelector('input[name="detectar_veiculo"]').checked;
+    const animal  = document.querySelector('input[name="detectar_animal"]').checked;
+
+    const marcadas = [];
+    if (pessoa)  marcadas.push('pessoas');
+    if (veiculo) marcadas.push('veículos');
+    if (animal)  marcadas.push('animais');
+
+    const texto = document.getElementById('aviso-movimento-texto');
+    const descMovimento = document.getElementById('desc-movimento');
+
+    if (marcadas.length > 0) {
+        const lista = marcadas.join(', ');
+        texto.textContent =
+            `Com "${lista}" marcado(s) acima, a gravação só inicia quando ` +
+            `a IA realmente confirmar uma dessas categorias — não basta a ` +
+            `imagem apenas mudar (ex: sombra, vento, mudança de luz).`;
+        descMovimento.textContent =
+            `Grava quando a IA detectar: ${lista}`;
+    } else {
+        texto.textContent =
+            `Nenhuma categoria marcada acima: a gravação ocorrerá em ` +
+            `qualquer movimento detectado (modo tradicional, sem filtro de IA).`;
+        descMovimento.textContent =
+            'Grava ao detectar movimento (modo tradicional)';
+    }
+}
+
+// Inicializa estado visual
+document.addEventListener('DOMContentLoaded', () => {
+    ['pessoa', 'veiculo', 'animal'].forEach(toggleCard);
+    atualizarAvisoMovimento();
+    atualizarModo();
+});
+</script>
+{% endblock %}

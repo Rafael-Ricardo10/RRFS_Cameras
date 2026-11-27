@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Monitor{% endblock %}
+
+{% block extra_css %}
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.page-title small {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 8px;
+}
+.stats-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.stat-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+.stat-num {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+}
+.stat-label { color: var(--text-muted); font-size: 11px; }
+
+/* ── Grid de câmeras ─────────────────────────────── */
+.cameras-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 16px;
+}
+
+.camera-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.camera-card:hover { border-color: rgba(0,170,255,0.3); }
+.camera-card.online { border-color: rgba(0,204,85,0.2); }
+
+.camera-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid var(--border);
+}
+.camera-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.camera-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ── Vídeo ───────────────────────────────────────── */
+.video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    overflow: hidden;
+}
+
+.video-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.video-overlay {
+    position: absolute;
+    top: 8px; right: 8px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.5);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+/* ── Vazio ───────────────────────────────────────── */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+}
+.empty-state h3 { font-size: 16px; margin-bottom: 8px; color: var(--text-secondary); }
+.empty-state p  { font-size: 13px; }
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="page-header">
+        <div>
+            <div class="page-title">
+                Monitor ao Vivo
+                <small>Atualização automática</small>
+            </div>
+        </div>
+        <a href="{{ url_for('cameras.configuracoes') }}" class="btn btn-secondary btn-sm">
+            ⚙ Configurações
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div>
+                <div class="stat-num">{{ cameras|length }}</div>
+                <div class="stat-label">Total</div>
+            </div>
+            <span style="font-size:18px; opacity:0.4">📷</span>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-num" style="color:var(--online)">
+                    {{ cameras|selectattr('online')|list|length }}
+                </div>
+                <div class="stat-label">Online</div>
+            </div>
+            <span style="font-size:18px; opacity:0.4">🟢</span>
+        </div>
+        <div class="stat-item">
+            <div>
+                <div class="stat-num" style="color:var(--offline)">
+                    {{ cameras|rejectattr('online')|list|length }}
+                </div>
+                <div class="stat-label">Offline</div>
+            </div>
+            <span style="font-size:18px; opacity:0.4">🔴</span>
+        </div>
+    </div>
+
+    {% if cameras %}
+    <div class="cameras-grid" id="cameras-grid">
+        {% for cam in cameras %}
+        <div class="camera-card {% if cam.online %}online{% endif %}"
+             id="card-{{ cam.id }}">
+
+            <div class="camera-header">
+                <div>
+                    <div class="camera-name">{{ cam.nome }}</div>
+                    <div class="camera-meta">{{ cam.ip }}:{{ cam.porta }}</div>
+                </div>
+                <span class="badge {% if cam.online %}badge-online{% else %}badge-offline{% endif %}"
+                      id="badge-{{ cam.id }}">
+                    <span class="dot {% if cam.online %}dot-online{% else %}dot-offline{% endif %}"
+                          id="dot-{{ cam.id }}"></span>
+                    <span id="status-{{ cam.id }}">
+                        {{ 'Online' if cam.online else 'Offline' }}
+                    </span>
+                </span>
+            </div>
+
+            <div class="video-container">
+                <img src="{{ url_for('streaming.video_feed', cam_id=cam.id) }}"
+                     alt="{{ cam.nome }}"
+                     loading="lazy"
+                     id="video-{{ cam.id }}">
+                <div class="video-overlay" id="overlay-{{ cam.id }}">
+                    CAM {{ cam.id }}
+                </div>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon">📷</div>
+            <h3>Nenhuma câmera configurada</h3>
+            <p>Vá em Configurações para adicionar suas câmeras IP.</p>
+            <a href="{{ url_for('cameras.configuracoes') }}"
+               class="btn btn-primary mt-2">
+                ⚙ Ir para Configurações
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Atualiza status das câmeras a cada 10s ──────────────────────────────
+(function() {
+    function atualizarStatus() {
+        fetch('{{ url_for("cameras.api_status") }}')
+            .then(r => r.json())
+            .then(data => {
+                data.forEach(cam => {
+                    const badge  = document.getElementById('badge-'  + cam.id);
+                    const dot    = document.getElementById('dot-'    + cam.id);
+                    const status = document.getElementById('status-' + cam.id);
+                    const card   = document.getElementById('card-'   + cam.id);
+
+                    if (!badge) return;
+
+                    if (cam.online) {
+                        badge.className  = 'badge badge-online';
+                        dot.className    = 'dot dot-online';
+                        status.textContent = 'Online';
+                        card.classList.add('online');
+                    } else {
+                        badge.className  = 'badge badge-offline';
+                        dot.className    = 'dot dot-offline';
+                        status.textContent = 'Offline';
+                        card.classList.remove('online');
+                    }
+                });
+            })
+            .catch(() => {}); // Silencioso
+    }
+
+    // Primeira chamada após 5s, depois a cada 10s
+    setTimeout(atualizarStatus, 5000);
+    setInterval(atualizarStatus, 10000);
+})();
+</script>
+{% endblock %}

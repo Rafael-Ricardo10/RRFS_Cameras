@@ -1,0 +1,34 @@
+# ══════════════════════════════════════════════════════
+# RRFS Cameras - Dependências Python
+# ══════════════════════════════════════════════════════
+
+# ── Core (Web Server) ────────────────────────────────
+Flask
+Flask-Login
+Werkzeug
+
+# ── Visão Computacional ──────────────────────────────
+opencv-python-headless
+numpy
+
+# ── Inteligência Artificial: Detecção de Objetos ─────
+ultralytics
+torch
+torchvision
+
+# ── Reconhecimento Facial (OPCIONAL) ─────────────────
+# Se não instalar estas duas linhas, o sistema funciona normalmente,
+# apenas com o reconhecimento facial desativado.
+# dlib
+# face_recognition
+face_recognition
+dlib
+
+# ── Utilitários ────────────────────────────────────────
+Pillow
+
+# FFmpeg (conversão de vídeo H.264)
+#sudo apt update && sudo apt install ffmpeg -y
+# Necessário para COMPILAR dlib (usado pelo face_recognition)
+#sudo apt install -y cmake build-essential libopenblas-dev liblapack-dev
+#sudo apt install -y libglib2.0-0 libsm6 libxext6 libxrender1

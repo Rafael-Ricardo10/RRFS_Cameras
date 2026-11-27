@@ -1,0 +1,6 @@
+flask
+flask-login
+opencv-python-headless
+numpy
+
+#  sudo apt update && sudo apt install ffmpeg -y

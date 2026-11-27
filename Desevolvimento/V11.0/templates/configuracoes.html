@@ -1,0 +1,954 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Configurações{% endblock %}
+
+{% block extra_css %}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 24px;
+}
+
+/* ── Tabela ──────────────────────────────────────── */
+.table-container { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+td {
+    padding: 12px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── Toggle ──────────────────────────────────────── */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px; height: 24px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--bg-input);
+    transition: .3s;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px; width: 16px;
+    left: 3px; bottom: 3px;
+    background: var(--text-muted);
+    transition: .3s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+input:checked + .slider:before {
+    transform: translateX(20px);
+    background: #fff;
+}
+
+/* ── Range ───────────────────────────────────────── */
+.range-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-input);
+    outline: none;
+}
+.range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+}
+.range-value {
+    display: inline-block;
+    min-width: 35px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* ── Badge transporte ────────────────────────────── */
+.badge-tcp {
+    background: rgba(0,170,255,0.12);
+    color: #00aaff;
+    border: 1px solid rgba(0,170,255,0.25);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+}
+.badge-udp {
+    background: rgba(255,170,0,0.12);
+    color: #ffaa00;
+    border: 1px solid rgba(255,170,0,0.25);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+}
+.badge-auto {
+    background: rgba(150,150,150,0.1);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* ── Badge zona ──────────────────────────────────── */
+.badge-zona {
+    background: rgba(0,200,100,0.12);
+    color: #00cc66;
+    border: 1px solid rgba(0,200,100,0.25);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    display: inline-block;
+}
+.badge-zona-vazia {
+    background: rgba(120,120,120,0.1);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+/* ── Badge IA ────────────────────────────────────── */
+.badge-ia-ativa {
+    background: rgba(0,170,255,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(0,170,255,0.3);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* ── Badge PTZ (NOVO) ────────────────────────────── */
+.badge-ptz-ativa {
+    background: rgba(170,0,255,0.12);
+    color: #aa66ff;
+    border: 1px solid rgba(170,0,255,0.3);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+}
+.badge-ptz-patrulha {
+    background: rgba(0,170,255,0.15);
+    color: #00aaff;
+    border: 1px solid rgba(0,170,255,0.3);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: inline-block;
+    animation: blink-ptz 1.5s infinite;
+}
+@keyframes blink-ptz {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.55; }
+}
+
+/* ── Modal ───────────────────────────────────────── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 540px;
+    margin: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    animation: slideUp 0.2s ease;
+    max-height: 92vh;
+    overflow-y: auto;
+}
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    z-index: 1;
+}
+.modal-body   { padding: 20px; }
+.modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
+}
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.btn-close:hover {
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+.hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+/* ── Seletor de transporte ───────────────────────── */
+.transport-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+.transport-option {
+    flex: 1;
+    position: relative;
+}
+.transport-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.transport-option label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    background: var(--bg-input);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.transport-option label:hover {
+    border-color: var(--accent);
+    background: rgba(0,170,255,0.05);
+}
+.transport-option input:checked + label {
+    border-color: var(--accent);
+    background: rgba(0,170,255,0.1);
+    color: var(--accent);
+}
+.transport-icon { font-size: 18px; }
+.transport-name {
+    font-size: 12px;
+    font-weight: 600;
+}
+.transport-desc {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+.transport-option input:checked + label .transport-desc {
+    color: rgba(0,170,255,0.7);
+}
+
+/* ── Preview URL ─────────────────────────────────── */
+.url-preview-box {
+    display: none;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-top: 10px;
+}
+.url-preview-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.url-preview-text {
+    font-size: 12px;
+    color: var(--accent);
+    word-break: break-all;
+    font-family: monospace;
+}
+
+/* ── Dica ────────────────────────────────────────── */
+.dica-box {
+    background: rgba(0,170,255,0.05);
+    border: 1px solid rgba(0,170,255,0.12);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    margin-top: 14px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+/* ── Divisor de seção ────────────────────────────── */
+.secao-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin: 18px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ── Ações ───────────────────────────────────────── */
+.acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Hardware IA Card ─────────────────────────────── */
+.hw-card-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+.hw-card-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.hw-card-icon { font-size: 30px; }
+.hw-card-stats {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.hw-stat-ok   { color: #00cc55; }
+.hw-stat-fail { color: #ff6644; }
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="page-title">⚙ Configurações</div>
+
+    <div style="display:grid;gap:20px;">
+
+        <!-- Armazenamento -->
+        <div class="card">
+            <div class="card-header">💾 Gerenciamento de Armazenamento</div>
+            <div class="card-body">
+                <form method="POST"
+                      style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+                    <div class="form-group" style="flex:1;margin:0;min-width:200px">
+                        <label class="form-label">
+                            Limite de Armazenamento (GB)
+                        </label>
+                        <input type="number" name="max_armazenamento"
+                               class="form-control"
+                               value="{{ max_armazenamento }}"
+                               min="1" max="2000" required>
+                        <div class="hint">
+                            Vídeos mais antigos são apagados automaticamente
+                            quando o limite é atingido
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        ✓ Salvar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Hardware de IA -->
+        <div class="card">
+            <div class="card-header">🧠 Status do Motor de Inteligência Artificial</div>
+            <div class="card-body">
+                <div class="hw-card-content">
+                    <div class="hw-card-info">
+                        <span class="hw-card-icon">
+                            {{ '🎮' if ia_hardware.gpu_disponivel else '🖥️' }}
+                        </span>
+                        <div>
+                            <strong>
+                                {% if ia_hardware.gpu_disponivel %}
+                                    GPU: {{ ia_hardware.gpu_nome }}
+                                {% else %}
+                                    Processando via CPU
+                                {% endif %}
+                            </strong>
+                            <div class="hw-card-stats">
+                                YOLO (objetos):
+                                <span class="{{ 'hw-stat-ok' if ia_hardware.yolo_ok else 'hw-stat-fail' }}">
+                                    {{ 'OK ✓' if ia_hardware.yolo_ok else 'Indisponível ✕' }}
+                                </span>
+                                &nbsp;·&nbsp;
+                                Facial:
+                                <span class="{{ 'hw-stat-ok' if ia_hardware.face_ok else 'hw-stat-fail' }}">
+                                    {{ 'OK ✓' if ia_hardware.face_ok else 'Indisponível ✕' }}
+                                </span>
+                                &nbsp;·&nbsp;
+                                PTZ (ONVIF):
+                                <span class="{{ 'hw-stat-ok' if ptz_disponivel else 'hw-stat-fail' }}">
+                                    {{ 'OK ✓' if ptz_disponivel else 'Indisponível ✕' }}
+                                </span>
+                                &nbsp;·&nbsp;
+                                {{ ia_hardware.total_pessoas_cadastradas }} pessoa(s) cadastrada(s)
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('ia.listar_pessoas') }}" class="btn btn-secondary btn-sm">
+                        👤 Gerenciar Pessoas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Câmeras -->
+        <div class="card">
+            <div class="card-header">
+                📷 Câmeras Cadastradas
+                <button class="btn btn-primary btn-sm"
+                        onclick="abrirModal()">
+                    + Adicionar Câmera
+                </button>
+            </div>
+            <div class="card-body" style="padding:0">
+                <div class="table-container">
+                {% if cameras %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nome</th>
+                            <th>IP</th>
+                            <th>Porta / Path</th>
+                            <th>Transporte</th>
+                            <th>Status</th>
+                            <th>Gravar</th>
+                            <th>Sensibilidade</th>
+                            <th>Zona</th>
+                            <th>IA</th>
+                            <th>PTZ</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for cam in cameras %}
+                    <tr>
+                        <td style="color:var(--text-muted)">
+                            {{ cam.id }}
+                        </td>
+                        <td style="font-weight:600">{{ cam.nome }}</td>
+                        <td>
+                            <code style="background:var(--bg-input);
+                                         padding:2px 6px;
+                                         border-radius:3px;
+                                         font-size:12px">
+                                {{ cam.ip }}
+                            </code>
+                        </td>
+                        <td>
+                            {% if cam.rtsp_path %}
+                                <code style="background:rgba(0,170,255,0.08);
+                                             color:var(--accent);
+                                             padding:2px 6px;
+                                             border-radius:3px;
+                                             font-size:11px">
+                                    /{{ cam.rtsp_path }}
+                                </code>
+                            {% else %}
+                                {{ cam.porta }}
+                            {% endif %}
+                        </td>
+                        <!-- Badge transporte -->
+                        <td>
+                            {% set t = cam.transporte | default('auto') %}
+                            {% if t == 'tcp' %}
+                                <span class="badge-tcp">TCP</span>
+                            {% elif t == 'udp' %}
+                                <span class="badge-udp">UDP</span>
+                            {% else %}
+                                <span class="badge-auto">AUTO</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge
+                                {% if cam.online %}badge-online
+                                {% else %}badge-offline{% endif %}">
+                                <span class="dot
+                                    {% if cam.online %}dot-online
+                                    {% else %}dot-offline{% endif %}">
+                                </span>
+                                {{ 'Online' if cam.online else 'Offline' }}
+                            </span>
+                        </td>
+
+                        <!-- Toggle Gravar -->
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('cameras.atualizar_gravacao', cam_id=cam.id) }}"
+                                  onchange="this.submit()">
+                                <label class="switch">
+                                    <input type="checkbox"
+                                           name="gravar" value="1"
+                                           {% if cam.gravar %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <input type="hidden" name="sensibilidade"
+                                       value="{{ cam.sensibilidade }}">
+                            </form>
+                        </td>
+
+                        <!-- Sensibilidade -->
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('cameras.atualizar_gravacao', cam_id=cam.id) }}"
+                                  style="display:flex;align-items:center;gap:8px;">
+                                <input type="range" class="range-slider"
+                                       name="sensibilidade"
+                                       min="10" max="100"
+                                       value="{{ cam.sensibilidade }}"
+                                       oninput="this.nextElementSibling.textContent = this.value + '%'"
+                                       onchange="this.form.submit()">
+                                <span class="range-value">
+                                    {{ cam.sensibilidade }}%
+                                </span>
+                                <input type="hidden" name="gravar"
+                                       value="{% if cam.gravar %}1{% else %}0{% endif %}">
+                            </form>
+                        </td>
+
+                        <!-- Zona -->
+                        <td>
+                            {% if cam.tem_zona %}
+                            <span class="badge-zona">✓ Definida</span>
+                            {% else %}
+                            <span class="badge-zona-vazia">Imagem toda</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- IA -->
+                        <td>
+                            {% if cam.ia_ativa %}
+                            <span class="badge-ia-ativa">🧠 Ativa</span>
+                            {% else %}
+                            <span class="badge-zona-vazia">Inativa</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- PTZ (NOVO) -->
+                        <td>
+                            {% if cam.ptz_patrulha_rodando %}
+                            <span class="badge-ptz-patrulha">🔄 Patrulhando</span>
+                            {% elif cam.ptz_ativo %}
+                            <span class="badge-ptz-ativa">🕹️ Ativo</span>
+                            {% else %}
+                            <span class="badge-zona-vazia">Inativo</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Ações -->
+                        <td>
+                            <div class="acoes">
+                                <a href="{{ url_for('ptz.editor_ptz', cam_id=cam.id) }}"
+                                   class="btn btn-secondary btn-sm"
+                                   title="Controle PTZ (Pan-Tilt-Zoom)">
+                                    🕹️ PTZ
+                                </a>
+                                <a href="{{ url_for('cameras.editor_ia', cam_id=cam.id) }}"
+                                   class="btn btn-secondary btn-sm"
+                                   title="Configurar Inteligência Artificial">
+                                    🧠 IA
+                                </a>
+                                <a href="{{ url_for('cameras.editor_zona', cam_id=cam.id) }}"
+                                   class="btn btn-secondary btn-sm"
+                                   title="Definir zona de detecção">
+                                    📐 Zona
+                                </a>
+                                <form method="POST"
+                                      action="{{ url_for('cameras.remover_camera', cam_id=cam.id) }}"
+                                      onsubmit="return confirmarRemover('{{ cam.nome }}')">
+                                    <button type="submit"
+                                            class="btn btn-danger btn-sm">
+                                        ✕
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div style="text-align:center;padding:30px;
+                            color:var(--text-muted)">
+                    📷 Nenhuma câmera cadastrada.<br>
+                    <small>Clique em "+ Adicionar Câmera" para começar.</small>
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="card">
+            <div class="card-header">ℹ Informações do Sistema</div>
+            <div class="card-body">
+                <table style="width:auto">
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Sistema
+                        </td>
+                        <td>RRFS Cameras</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Servidor
+                        </td>
+                        <td>0.0.0.0:2901</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Câmeras
+                        </td>
+                        <td>{{ cameras|length }} cadastrada(s)</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Protocolo
+                        </td>
+                        <td>RTSP / MJPEG</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Transporte
+                        </td>
+                        <td>TCP · UDP · Auto (TCP→UDP)</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Detecção
+                        </td>
+                        <td>Dia/Noite · Zona de interesse</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Inteligência Artificial
+                        </td>
+                        <td>
+                            Objetos (YOLOv8) · Reconhecimento Facial ·
+                            Device: {{ ia_hardware.device|upper }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Controle PTZ
+                        </td>
+                        <td>
+                            ONVIF · Auto-Calibração · Presets · Patrulha
+                            automática
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--text-muted);padding:4px 20px 4px 0">
+                            Watermark
+                        </td>
+                        <td>RRFS Cameras + Data/Hora</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Modal Adicionar Câmera ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-adicionar">
+    <div class="modal-box">
+        <div class="modal-header">
+            📷 Adicionar Câmera
+            <button class="btn-close" onclick="fecharModal()">×</button>
+        </div>
+        <form method="POST"
+              action="{{ url_for('cameras.adicionar_camera') }}">
+            <div class="modal-body">
+
+                <!-- Nome -->
+                <div class="form-group">
+                    <label class="form-label">Nome da Câmera *</label>
+                    <input type="text" name="nome"
+                           class="form-control"
+                           placeholder="Ex: Entrada Principal"
+                           required autofocus
+                           oninput="atualizarPreview()">
+                </div>
+
+                <div class="secao-label">🌐 Conexão de Rede</div>
+
+                <!-- IP + Porta -->
+                <div style="display:grid;
+                            grid-template-columns:2fr 1fr;
+                            gap:12px;margin-bottom:16px">
+                    <div>
+                        <label class="form-label">IP da Câmera *</label>
+                        <input type="text" name="ip" id="f-ip"
+                               class="form-control"
+                               placeholder="192.168.1.100"
+                               required
+                               oninput="atualizarPreview()">
+                        <div class="hint">Endereço IP na rede local</div>
+                    </div>
+                    <div>
+                        <label class="form-label">Porta RTSP</label>
+                        <input type="number" name="porta" id="f-porta"
+                               class="form-control"
+                               value="554"
+                               min="1" max="65535"
+                               oninput="atualizarPreview()">
+                        <div class="hint">Padrão: 554</div>
+                    </div>
+                </div>
+
+                <!-- Usuário + Senha -->
+                <div style="display:grid;
+                            grid-template-columns:1fr 1fr;
+                            gap:12px;margin-bottom:16px">
+                    <div>
+                        <label class="form-label">Usuário</label>
+                        <input type="text" name="usuario" id="f-usuario"
+                               class="form-control"
+                               placeholder="admin"
+                               autocomplete="off"
+                               oninput="atualizarPreview()">
+                    </div>
+                    <div>
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="senha" id="f-senha"
+                               class="form-control"
+                               placeholder="••••••"
+                               autocomplete="off"
+                               oninput="atualizarPreview()">
+                    </div>
+                </div>
+
+                <!-- RTSP Path -->
+                <div class="form-group">
+                    <label class="form-label">
+                        📡 Path RTSP Customizado
+                        <span style="color:var(--text-muted);
+                                     font-size:10px;
+                                     font-weight:400;
+                                     text-transform:none;
+                                     margin-left:4px">
+                            (opcional · Yoose / ONVIF sem porta)
+                        </span>
+                    </label>
+                    <input type="text" name="rtsp_path" id="f-rtsp-path"
+                           class="form-control"
+                           placeholder="Ex: onvif2  ou  live/ch00_0"
+                           oninput="atualizarPreview()">
+                    <div class="hint">
+                        Se preenchido, usa:
+                        <code style="background:var(--bg-input);
+                                     padding:1px 4px;border-radius:3px">
+                            rtsp://usuario:senha@ip/path
+                        </code>
+                        (ignora a porta)
+                    </div>
+                </div>
+
+                <!-- Preview URL -->
+                <div class="url-preview-box" id="url-preview">
+                    <div class="url-preview-label">🔗 URL que será usada:</div>
+                    <div class="url-preview-text" id="url-preview-text"></div>
+                </div>
+
+                <div class="secao-label" style="margin-top:20px">
+                    📡 Protocolo de Transporte RTSP
+                </div>
+
+                <!-- Seletor de Transporte -->
+                <div class="transport-selector">
+
+                    <div class="transport-option">
+                        <input type="radio" name="transporte"
+                               id="t-auto" value="auto" checked>
+                        <label for="t-auto">
+                            <span class="transport-icon">🔄</span>
+                            <span class="transport-name">AUTO</span>
+                            <span class="transport-desc">
+                                Tenta TCP.<br>
+                                Se falhar, usa UDP.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="transport-option">
+                        <input type="radio" name="transporte"
+                               id="t-tcp" value="tcp">
+                        <label for="t-tcp">
+                            <span class="transport-icon">🔵</span>
+                            <span class="transport-name">TCP</span>
+                            <span class="transport-desc">
+                                Mais estável.<br>
+                                Câmeras padrão.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="transport-option">
+                        <input type="radio" name="transporte"
+                               id="t-udp" value="udp">
+                        <label for="t-udp">
+                            <span class="transport-icon">🟡</span>
+                            <span class="transport-name">UDP</span>
+                            <span class="transport-desc">
+                                Para câmeras<br>
+                                Yoose / ONVIF.
+                            </span>
+                        </label>
+                    </div>
+
+                </div>
+
+                <!-- Dicas -->
+                <div class="dica-box">
+                    💡 <strong>Câmeras iCSee/Padrão:</strong>
+                    porta <code style="background:var(--bg-input);
+                                       padding:1px 4px;border-radius:3px">554</code>
+                    · transporte <strong>AUTO</strong> ou <strong>TCP</strong><br>
+                    💡 <strong>Câmeras Yoose:</strong>
+                    path <code style="background:var(--bg-input);
+                                      padding:1px 4px;border-radius:3px">onvif2</code>
+                    · transporte <strong>UDP</strong><br>
+                    💡 <strong>Senha com % especial:</strong>
+                    digite exatamente como aparece no app
+                    (ex: <code style="background:var(--bg-input);
+                                       padding:1px 4px;border-radius:3px">
+                    Homesick1%F</code>)<br>
+                    💡 <strong>Após adicionar:</strong>
+                    configure a IA clicando em
+                    <strong>🧠 IA</strong> ou o PTZ clicando em
+                    <strong>🕹️ PTZ</strong> na tabela de câmeras.
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                        onclick="fecharModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    ✓ Adicionar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Modal ─────────────────────────────────────────────────────────────────
+function abrirModal() {
+    document.getElementById('modal-adicionar').classList.add('show');
+    setTimeout(function() {
+        document.querySelector('[name="nome"]').focus();
+    }, 100);
+}
+function fecharModal() {
+    document.getElementById('modal-adicionar').classList.remove('show');
+}
+document.getElementById('modal-adicionar')
+    .addEventListener('click', function(e) {
+        if (e.target === this) fecharModal();
+    });
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fecharModal();
+});
+
+// ── Confirmar remoção ─────────────────────────────────────────────────────
+function confirmarRemover(nome) {
+    return confirm(
+        'Remover a câmera "' + nome + '"?\n' +
+        'Os eventos gravados serão mantidos.'
+    );
+}
+
+// ── Preview URL em tempo real ─────────────────────────────────────────────
+function atualizarPreview() {
+    const ip      = (document.getElementById('f-ip').value       || '').trim();
+    const porta   = (document.getElementById('f-porta').value    || '').trim();
+    const usuario = (document.getElementById('f-usuario').value  || '').trim();
+    const path    = (document.getElementById('f-rtsp-path').value|| '').trim();
+
+    const preview  = document.getElementById('url-preview');
+    const previewT = document.getElementById('url-preview-text');
+
+    if (!ip) {
+        preview.style.display = 'none';
+        return;
+    }
+
+    let auth = '';
+    if (usuario) auth = usuario + ':****@';
+
+    let url = '';
+    if (path) {
+        url = 'rtsp://' + auth + ip + '/' + path.replace(/^\//, '');
+    } else {
+        const p = porta || '554';
+        url = 'rtsp://' + auth + ip + ':' + p + '/live/ch00_0';
+    }
+
+    previewT.textContent  = url;
+    preview.style.display = 'block';
+}
+</script>
+{% endblock %}

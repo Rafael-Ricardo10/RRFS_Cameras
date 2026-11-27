@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+{% block title %}RRFS Cameras - Configurações{% endblock %}
+
+{% block extra_css %}
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+}
+.section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+}
+.form-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 12px;
+}
+/* ── Tabela ──────────────────────────────────────── */
+.table-container { overflow-x: auto; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+td {
+    padding: 12px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* ── Toggle Switch ───────────────────────────────── */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--bg-input);
+    transition: .3s;
+    border-radius: 24px;
+    border: 1px solid var(--border);
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text-muted);
+    transition: .3s;
+    border-radius: 50%;
+}
+input:checked + .slider {
+    background-color: var(--accent);
+    border-color: var(--accent);
+}
+input:checked + .slider:before {
+    transform: translateX(20px);
+    background-color: #fff;
+}
+
+/* ── Range Slider ────────────────────────────────── */
+.range-slider {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-input);
+    outline: none;
+}
+.range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+}
+.range-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+}
+
+.range-value {
+    display: inline-block;
+    min-width: 35px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* ── Modal ───────────────────────────────────────── */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+}
+.modal-overlay.show { display: flex; }
+@keyframes fadeIn {
+    from { opacity: 0; } to { opacity: 1; }
+}
+.modal-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 480px;
+    margin: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+}
+.modal-body { padding: 20px; }
+.modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.btn-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+}
+.btn-close:hover { background: var(--bg-input); color: var(--text-primary); }
+.hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="content">
+    <div class="page-title">⚙ Configurações</div>
+
+    <div style="display:grid; grid-template-columns: 1fr; gap:20px;">
+
+        <!-- ── Armazenamento ─────────────────────────── -->
+        <div class="card">
+            <div class="card-header">💾 Gerenciamento de Armazenamento</div>
+            <div class="card-body">
+                <form method="POST" style="display:flex; align-items:end; gap:12px;">
+                    <div class="form-group" style="flex:1; margin:0;">
+                        <label class="form-label">Limite de Armazenamento (GB)</label>
+                        <input type="number" name="max_armazenamento"
+                               class="form-control"
+                               value="{{ max_armazenamento }}"
+                               min="1" max="1000" required>
+                        <div class="hint">
+                            Vídeos mais antigos serão apagados automaticamente quando o limite for atingido
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        ✓ Salvar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ── Câmeras cadastradas ─────────────────────── -->
+        <div class="card">
+            <div class="card-header">
+                Câmeras Cadastradas
+                <button class="btn btn-primary btn-sm" onclick="abrirModal()">
+                    + Adicionar Câmera
+                </button>
+            </div>
+            <div class="card-body" style="padding:0">
+                <div class="table-container">
+                    {% if cameras %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nome</th>
+                                <th>IP</th>
+                                <th>Porta</th>
+                                <th>Status</th>
+                                <th>Gravar</th>
+                                <th>Sensibilidade</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for cam in cameras %}
+                        <tr>
+                            <td style="color:var(--text-muted)">{{ cam.id }}</td>
+                            <td style="font-weight:600">{{ cam.nome }}</td>
+                            <td>
+                                <code style="background:var(--bg-input);
+                                             padding:2px 6px;
+                                             border-radius:3px;
+                                             font-size:12px">
+                                    {{ cam.ip }}
+                                </code>
+                            </td>
+                            <td>{{ cam.porta }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if cam.online %}badge-online{% else %}badge-offline{% endif %}">
+                                    <span class="dot
+                                        {% if cam.online %}dot-online{% else %}dot-offline{% endif %}">
+                                    </span>
+                                    {{ 'Online' if cam.online else 'Offline' }}
+                                </span>
+                            </td>
+                            <td>
+                                <form method="POST"
+                                      action="{{ url_for('cameras.atualizar_gravacao', cam_id=cam.id) }}"
+                                      onchange="this.submit()"
+                                      style="display:inline">
+                                    <label class="switch">
+                                        <input type="checkbox" name="gravar" value="1"
+                                               {% if cam.gravar %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <input type="hidden" name="sensibilidade" value="{{ cam.sensibilidade }}">
+                                </form>
+                            </td>
+                            <td>
+                                <form method="POST"
+                                      action="{{ url_for('cameras.atualizar_gravacao', cam_id=cam.id) }}"
+                                      style="display:flex; align-items:center; gap:8px;">
+                                    <input type="range" class="range-slider"
+                                           name="sensibilidade" min="10" max="100"
+                                           value="{{ cam.sensibilidade }}"
+                                           oninput="this.nextElementSibling.textContent = this.value + '%'"
+                                           onchange="this.form.submit()">
+                                    <span class="range-value">{{ cam.sensibilidade }}%</span>
+                                    <input type="hidden" name="gravar" value="{% if cam.gravar %}1{% else %}0{% endif %}">
+                                </form>
+                            </td>
+                            <td>
+                                <form method="POST"
+                                      action="{{ url_for('cameras.remover_camera', cam_id=cam.id) }}"
+                                      onsubmit="return confirmarRemover('{{ cam.nome }}')">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        ✕ Remover
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">
+                        📷 Nenhuma câmera cadastrada.<br>
+                        <small>Clique em "Adicionar Câmera" para começar.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Modal: Adicionar Câmera ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-adicionar">
+    <div class="modal-box">
+        <div class="modal-header">
+            📷 Adicionar Câmera
+            <button class="btn-close" onclick="fecharModal()">×</button>
+        </div>
+        <form method="POST" action="{{ url_for('cameras.adicionar_camera') }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nome da Câmera *</label>
+                    <input type="text" name="nome"
+                           class="form-control"
+                           placeholder="Ex: Entrada Principal"
+                           required autofocus>
+                </div>
+
+                <div class="form-row" style="margin-bottom:16px">
+                    <div>
+                        <label class="form-label">IP da Câmera *</label>
+                        <input type="text" name="ip"
+                               class="form-control"
+                               placeholder="192.168.1.100"
+                               pattern="^(\d{1,3}\.){3}\d{1,3}$"
+                               required>
+                        <div class="hint">Endereço IP na rede local</div>
+                    </div>
+                    <div>
+                        <label class="form-label">Porta RTSP *</label>
+                        <input type="number" name="porta"
+                               class="form-control"
+                               value="554"
+                               min="1" max="65535"
+                               required>
+                        <div class="hint">Padrão: 554</div>
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom:0">
+                    <div>
+                        <label class="form-label">Usuário da Câmera</label>
+                        <input type="text" name="usuario"
+                               class="form-control"
+                               placeholder="admin"
+                               autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="form-label">Senha da Câmera</label>
+                        <input type="password" name="senha"
+                               class="form-control"
+                               placeholder="••••••"
+                               autocomplete="off">
+                    </div>
+                </div>
+                <div class="hint" style="margin-top:6px">
+                    💡 Para câmeras iCSee: usuário <code style="background:var(--bg-input);padding:1px 4px;border-radius:3px">admin</code>
+                    e a senha configurada no app.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="fecharModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    ✓ Adicionar Câmera
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function abrirModal() {
+    document.getElementById('modal-adicionar').classList.add('show');
+}
+function fecharModal() {
+    document.getElementById('modal-adicionar').classList.remove('show');
+}
+document.getElementById('modal-adicionar').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fecharModal();
+});
+function confirmarRemover(nome) {
+    return confirm('Remover a câmera "' + nome + '"?\nTodos os eventos gravados desta câmera serão mantidos.');
+}
+</script>
+{% endblock %}
